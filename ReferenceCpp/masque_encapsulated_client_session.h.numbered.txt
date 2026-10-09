@@ -1,0 +1,102 @@
+     1	// Copyright 2019 The Chromium Authors. All rights reserved.
+     2	// Use of this source code is governed by a BSD-style license that can be
+     3	// found in the LICENSE file.
+     4	
+     5	#ifndef QUICHE_QUIC_MASQUE_MASQUE_ENCAPSULATED_CLIENT_SESSION_H_
+     6	#define QUICHE_QUIC_MASQUE_MASQUE_ENCAPSULATED_CLIENT_SESSION_H_
+     7	
+     8	#include <string>
+     9	
+    10	#include "absl/strings/string_view.h"
+    11	#include "quiche/quic/core/crypto/quic_crypto_client_config.h"
+    12	#include "quiche/quic/core/frames/quic_connection_close_frame.h"
+    13	#include "quiche/quic/core/http/quic_spdy_client_session.h"
+    14	#include "quiche/quic/core/quic_config.h"
+    15	#include "quiche/quic/core/quic_error_codes.h"
+    16	#include "quiche/quic/core/quic_types.h"
+    17	#include "quiche/quic/core/quic_versions.h"
+    18	#include "quiche/quic/masque/masque_client_session.h"
+    19	#include "quiche/quic/platform/api/quic_export.h"
+    20	#include "quiche/quic/platform/api/quic_ip_address.h"
+    21	#include "quiche/quic/platform/api/quic_socket_address.h"
+    22	#include "quiche/common/capsule.h"
+    23	
+    24	namespace quic {
+    25	
+    26	// QUIC client session for QUIC encapsulated in MASQUE. This client session is
+    27	// maintained end-to-end between the client and the web-server (the MASQUE
+    28	// session does not have access to the cryptographic keys for the end-to-end
+    29	// session), but its packets are sent encapsulated inside DATAGRAM frames in a
+    30	// MASQUE session, as opposed to regular QUIC packets. Multiple encapsulated
+    31	// sessions can coexist inside a MASQUE session.
+    32	class QUIC_NO_EXPORT MasqueEncapsulatedClientSession
+    33	    : public MasqueClientSession,
+    34	      public MasqueClientSession::EncapsulatedClientSession,
+    35	      public MasqueClientSession::EncapsulatedIpSession {
+    36	 public:
+    37	  // Constructor for when this is only an encapsulated session.
+    38	  // Takes ownership of |connection|, but not of |crypto_config| or
+    39	  // |masque_client_session|. All pointers must be non-null. Caller must ensure
+    40	  // that |masque_client_session| stays valid for the lifetime of the newly
+    41	  // created MasqueEncapsulatedClientSession.
+    42	  MasqueEncapsulatedClientSession(
+    43	      const QuicConfig& config,
+    44	      const ParsedQuicVersionVector& supported_versions,
+    45	      QuicConnection* connection, const QuicServerId& server_id,
+    46	      QuicCryptoClientConfig* crypto_config,
+    47	      MasqueClientSession* masque_client_session,
+    48	      MasqueClientSession::Owner* owner);
+    49	
+    50	  // Constructor for when this session is both encapsulated and underlying.
+    51	  MasqueEncapsulatedClientSession(
+    52	      MasqueMode masque_mode, const std::string& uri_template,
+    53	      const QuicConfig& config,
+    54	      const ParsedQuicVersionVector& supported_versions,
+    55	      QuicConnection* connection, const QuicServerId& server_id,
+    56	      QuicCryptoClientConfig* crypto_config,
+    57	      MasqueClientSession* masque_client_session,
+    58	      MasqueClientSession::Owner* owner);
+    59	
+    60	  // Disallow copy and assign.
+    61	  MasqueEncapsulatedClientSession(const MasqueEncapsulatedClientSession&) =
+    62	      delete;
+    63	  MasqueEncapsulatedClientSession& operator=(
+    64	      const MasqueEncapsulatedClientSession&) = delete;
+    65	
+    66	  // From MasqueClientSession::EncapsulatedClientSession.
+    67	  void ProcessPacket(absl::string_view packet,
+    68	                     QuicSocketAddress server_address) override;
+    69	  void CloseConnection(
+    70	      QuicErrorCode error, const std::string& details,
+    71	      ConnectionCloseBehavior connection_close_behavior) override;
+    72	
+    73	  // From MasqueClientSession::EncapsulatedIpSession.
+    74	  void ProcessIpPacket(absl::string_view packet) override;
+    75	  void CloseIpSession(const std::string& details) override;
+    76	  bool OnAddressAssignCapsule(
+    77	      const quiche::AddressAssignCapsule& capsule) override;
+    78	  bool OnAddressRequestCapsule(
+    79	      const quiche::AddressRequestCapsule& capsule) override;
+    80	  bool OnRouteAdvertisementCapsule(
+    81	      const quiche::RouteAdvertisementCapsule& capsule) override;
+    82	  bool OnDnsAssignCapsule(const DnsAssignCapsule& capsule) override;
+    83	  bool OnPref64Capsule(const Pref64Capsule& capsule) override;
+    84	
+    85	  // From QuicSession.
+    86	  void OnConnectionClosed(const QuicConnectionCloseFrame& frame,
+    87	                          ConnectionCloseSource source) override;
+    88	
+    89	  // For CONNECT-IP.
+    90	  QuicIpAddress local_v4_address() const { return local_v4_address_; }
+    91	  QuicIpAddress local_v6_address() const { return local_v6_address_; }
+    92	
+    93	 private:
+    94	  MasqueClientSession* masque_client_session_;  // Unowned.
+    95	  // For CONNECT-IP.
+    96	  QuicIpAddress local_v4_address_;
+    97	  QuicIpAddress local_v6_address_;
+    98	};
+    99	
+   100	}  // namespace quic
+   101	
+   102	#endif  // QUICHE_QUIC_MASQUE_MASQUE_ENCAPSULATED_CLIENT_SESSION_H_

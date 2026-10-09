@@ -1,0 +1,416 @@
+     1	// Copyright 2019 The Chromium Authors. All rights reserved.
+     2	// Use of this source code is governed by a BSD-style license that can be
+     3	// found in the LICENSE file.
+     4	
+     5	#ifndef QUICHE_QUIC_MASQUE_MASQUE_CLIENT_SESSION_H_
+     6	#define QUICHE_QUIC_MASQUE_MASQUE_CLIENT_SESSION_H_
+     7	
+     8	#include <cstdint>
+     9	#include <list>
+    10	#include <optional>
+    11	#include <string>
+    12	
+    13	#include "absl/container/flat_hash_map.h"
+    14	#include "absl/strings/string_view.h"
+    15	#include "quiche/quic/core/crypto/quic_crypto_client_config.h"
+    16	#include "quiche/quic/core/frames/quic_connection_close_frame.h"
+    17	#include "quiche/quic/core/http/http_frames.h"
+    18	#include "quiche/quic/core/http/quic_spdy_client_session.h"
+    19	#include "quiche/quic/core/http/quic_spdy_client_stream.h"
+    20	#include "quiche/quic/core/http/quic_spdy_session.h"
+    21	#include "quiche/quic/core/http/quic_spdy_stream.h"
+    22	#include "quiche/quic/core/quic_config.h"
+    23	#include "quiche/quic/core/quic_error_codes.h"
+    24	#include "quiche/quic/core/quic_time.h"
+    25	#include "quiche/quic/core/quic_types.h"
+    26	#include "quiche/quic/core/quic_versions.h"
+    27	#include "quiche/quic/masque/masque_utils.h"
+    28	#include "quiche/quic/platform/api/quic_export.h"
+    29	#include "quiche/quic/platform/api/quic_logging.h"
+    30	#include "quiche/quic/platform/api/quic_socket_address.h"
+    31	#include "quiche/quic/tools/quic_url.h"
+    32	#include "quiche/common/capsule.h"
+    33	#include "quiche/common/http/http_header_block.h"
+    34	#include "quiche/common/quiche_ip_address.h"
+    35	
+    36	namespace quic {
+    37	
+    38	// QUIC client session for connection to MASQUE proxy. This session establishes
+    39	// a connection to a MASQUE proxy and handles sending and receiving DATAGRAM
+    40	// frames for operation of the MASQUE protocol. Multiple end-to-end encapsulated
+    41	// sessions can then coexist inside this session. Once these are created, they
+    42	// need to be registered with this session.
+    43	class QUIC_NO_EXPORT MasqueClientSession : public QuicSpdyClientSession,
+    44	                                           public QuicSpdyStream::Visitor {
+    45	 public:
+    46	  using ContextId = uint64_t;
+    47	  // Interface meant to be implemented by the owner of the
+    48	  // MasqueClientSession instance.
+    49	  class QUIC_NO_EXPORT Owner {
+    50	   public:
+    51	    virtual ~Owner() {}
+    52	
+    53	    // Notifies the owner that a settings frame has been received.
+    54	    virtual void OnSettingsReceived() = 0;
+    55	  };
+    56	
+    57	  // Interface meant to be implemented by client sessions encapsulated inside
+    58	  // CONNECT-UDP, i.e. the end-to-end QUIC client sessions that run inside
+    59	  // CONNECT-UDP encapsulation.
+    60	  class QUIC_NO_EXPORT EncapsulatedClientSession {
+    61	   public:
+    62	    virtual ~EncapsulatedClientSession() {}
+    63	
+    64	    // Process UDP packet that was just decapsulated. |packet| contains the UDP
+    65	    // payload.
+    66	    virtual void ProcessPacket(absl::string_view packet,
+    67	                               QuicSocketAddress target_server_address) = 0;
+    68	
+    69	    // Close the encapsulated connection.
+    70	    virtual void CloseConnection(
+    71	        QuicErrorCode error, const std::string& details,
+    72	        ConnectionCloseBehavior connection_close_behavior) = 0;
+    73	  };
+    74	
+    75	  // Interface meant to be implemented by client sessions encapsulated inside
+    76	  // CONNECT-IP, i.e. the end-to-end QUIC client sessions that run inside
+    77	  // CONNECT-IP encapsulation.
+    78	  class QUIC_NO_EXPORT EncapsulatedIpSession {
+    79	   public:
+    80	    virtual ~EncapsulatedIpSession() {}
+    81	
+    82	    // Process packet that was just decapsulated. |packet| contains the IP
+    83	    // header and payload.
+    84	    virtual void ProcessIpPacket(absl::string_view packet) = 0;
+    85	
+    86	    // Close the encapsulated connection.
+    87	    virtual void CloseIpSession(const std::string& details) = 0;
+    88	
+    89	    virtual bool OnAddressAssignCapsule(
+    90	        const quiche::AddressAssignCapsule& capsule) = 0;
+    91	    virtual bool OnAddressRequestCapsule(
+    92	        const quiche::AddressRequestCapsule& capsule) = 0;
+    93	    virtual bool OnRouteAdvertisementCapsule(
+    94	        const quiche::RouteAdvertisementCapsule& capsule) = 0;
+    95	    virtual bool OnDnsAssignCapsule(const DnsAssignCapsule& /*capsule*/) {
+    96	      return true;
+    97	    }
+    98	    virtual bool OnPref64Capsule(const Pref64Capsule& /*capsule*/) {
+    99	      return true;
+   100	    }
+   101	  };
+   102	
+   103	  // CONNECT-ETHERNET.
+   104	  class QUIC_NO_EXPORT EncapsulatedEthernetSession {
+   105	   public:
+   106	    virtual ~EncapsulatedEthernetSession() {}
+   107	
+   108	    // Process packet that was just decapsulated. |frame| contains the
+   109	    // Ethernet header and payload.
+   110	    virtual void ProcessEthernetFrame(absl::string_view frame) = 0;
+   111	
+   112	    // Close the encapsulated connection.
+   113	    virtual void CloseEthernetSession(const std::string& details) = 0;
+   114	  };
+   115	
+   116	  // Constructor for when this is only an underlying session.
+   117	  // Takes ownership of |connection|, but not of |crypto_config| or |owner|.
+   118	  // All pointers must be non-null. Caller must ensure that |owner| stays valid
+   119	  // for the lifetime of the newly created MasqueClientSession.
+   120	  MasqueClientSession(MasqueMode masque_mode, const std::string& uri_template,
+   121	                      const QuicConfig& config,
+   122	                      const ParsedQuicVersionVector& supported_versions,
+   123	                      QuicConnection* connection, const QuicServerId& server_id,
+   124	                      QuicCryptoClientConfig* crypto_config, Owner* owner);
+   125	
+   126	  // Constructor for when this is only an encapsulated session.
+   127	  MasqueClientSession(const QuicConfig& config,
+   128	                      const ParsedQuicVersionVector& supported_versions,
+   129	                      QuicConnection* connection, const QuicServerId& server_id,
+   130	                      QuicCryptoClientConfig* crypto_config, Owner* owner);
+   131	
+   132	  // Disallow copy and assign.
+   133	  MasqueClientSession(const MasqueClientSession&) = delete;
+   134	  MasqueClientSession& operator=(const MasqueClientSession&) = delete;
+   135	
+   136	  // From QuicSession.
+   137	  void OnDatagramAcked(QuicDatagramId datagram_id) override;
+   138	  void OnDatagramLost(QuicDatagramId datagram_id) override;
+   139	  void OnConnectionClosed(const QuicConnectionCloseFrame& frame,
+   140	                          ConnectionCloseSource source) override;
+   141	  void OnStreamClosed(QuicStreamId stream_id) override;
+   142	
+   143	  // From QuicSpdySession.
+   144	  bool OnSettingsFrame(const SettingsFrame& frame) override;
+   145	
+   146	  // Send encapsulated UDP packet. |packet| contains the UDP payload.
+   147	  void SendPacket(absl::string_view packet,
+   148	                  const QuicSocketAddress& target_server_address,
+   149	                  EncapsulatedClientSession* encapsulated_client_session);
+   150	
+   151	  // Send CONNECT-UDP-BIND packet, creating contexts if needed.
+   152	  void SendConnectUdpBindPacket(
+   153	      absl::string_view packet, const QuicSocketAddress& target_server_address,
+   154	      EncapsulatedClientSession* encapsulated_client_session);
+   155	
+   156	  // Request uncompressed context for CONNECT-UDP Bind.
+   157	  void set_bind_use_uncompressed_context(bool use_uncompressed_context) {
+   158	    QUICHE_DCHECK(masque_mode_ == MasqueMode::kConnectUdpBind);
+   159	    bind_use_uncompressed_context_ = use_uncompressed_context;
+   160	  }
+   161	
+   162	  // Send encapsulated IP packet. |packet| contains the IP header and payload.
+   163	  void SendIpPacket(absl::string_view packet,
+   164	                    EncapsulatedIpSession* encapsulated_ip_session);
+   165	
+   166	  // Send DNS_ASSIGN capsule over CONNECT-IP stream.
+   167	  void SendDnsAssignCapsule(const DnsAssignCapsule& capsule,
+   168	                            EncapsulatedIpSession* encapsulated_ip_session);
+   169	
+   170	  // Send PREF64 capsule over CONNECT-IP stream.
+   171	  void SendPref64Capsule(const Pref64Capsule& capsule,
+   172	                         EncapsulatedIpSession* encapsulated_ip_session);
+   173	
+   174	  // Send encapsulated Ethernet frame. |frame| contains the Ethernet
+   175	  // header and payload.
+   176	  void SendEthernetFrame(
+   177	      absl::string_view frame,
+   178	      EncapsulatedEthernetSession* encapsulated_ethernet_session);
+   179	
+   180	  // Close CONNECT-UDP stream tied to this encapsulated client session.
+   181	  void CloseConnectUdpStream(
+   182	      EncapsulatedClientSession* encapsulated_client_session);
+   183	
+   184	  // Close CONNECT-IP stream tied to this encapsulated client session.
+   185	  void CloseConnectIpStream(EncapsulatedIpSession* encapsulated_ip_session);
+   186	
+   187	  // Close CONNECT-ETHERNET stream tied to this encapsulated client session.
+   188	  void CloseConnectEthernetStream(
+   189	      EncapsulatedEthernetSession* encapsulated_ethernet_session);
+   190	
+   191	  // Generate a random Unique Local Address and register a mapping from
+   192	  // that address to the corresponding hostname. The returned address should be
+   193	  // removed by calling RemoveFakeAddress() once it is no longer needed.
+   194	  quiche::QuicheIpAddress GetFakeAddress(absl::string_view hostname);
+   195	
+   196	  // Removes a fake address that was previously created by GetFakeAddress().
+   197	  void RemoveFakeAddress(const quiche::QuicheIpAddress& fake_address);
+   198	
+   199	  // Set additional HTTP headers that will be sent on all requests to the MASQUE
+   200	  // proxy. Separated with colons and semicolons.
+   201	  // For example: "name1:value1;name2:value2".
+   202	  void set_additional_headers(absl::string_view additional_headers) {
+   203	    additional_headers_ = additional_headers;
+   204	  }
+   205	
+   206	  // Send a GET request to the MASQUE proxy itself.
+   207	  QuicSpdyClientStream* SendGetRequest(absl::string_view path);
+   208	
+   209	  // QuicSpdyStream::Visitor
+   210	  void OnClose(QuicSpdyStream* stream) override;
+   211	
+   212	  // Set the concealed auth key ID and private key. key_id MUST be non-empty,
+   213	  // private_key MUST be ED25519_PRIVATE_KEY_LEN bytes long and public_key MUST
+   214	  // be ED25519_PUBLIC_KEY_LEN bytes long.
+   215	  void EnableConcealedAuth(absl::string_view key_id,
+   216	                           absl::string_view private_key,
+   217	                           absl::string_view public_key);
+   218	
+   219	 private:
+   220	  // State that the MasqueClientSession keeps for each CONNECT-UDP request.
+   221	  class QUIC_NO_EXPORT ConnectUdpClientState
+   222	      : public QuicSpdyStream::Http3DatagramVisitor,
+   223	        public QuicSpdyStream::ConnectUdpBindVisitor {
+   224	   public:
+   225	    // |stream| and |encapsulated_client_session| must be valid for the lifetime
+   226	    // of the ConnectUdpClientState.
+   227	    explicit ConnectUdpClientState(
+   228	        QuicSpdyClientStream* stream,
+   229	        EncapsulatedClientSession* encapsulated_client_session,
+   230	        MasqueClientSession* masque_session,
+   231	        const QuicSocketAddress& target_server_address);
+   232	
+   233	    ~ConnectUdpClientState();
+   234	
+   235	    void set_is_bind(bool is_bind) { is_bind_ = is_bind; }
+   236	    bool is_bind() const { return is_bind_; }
+   237	
+   238	    // Disallow copy but allow move.
+   239	    ConnectUdpClientState(const ConnectUdpClientState&) = delete;
+   240	    ConnectUdpClientState(ConnectUdpClientState&&);
+   241	    ConnectUdpClientState& operator=(const ConnectUdpClientState&) = delete;
+   242	    ConnectUdpClientState& operator=(ConnectUdpClientState&&);
+   243	
+   244	    QuicSpdyClientStream* stream() const { return stream_; }
+   245	    EncapsulatedClientSession* encapsulated_client_session() const {
+   246	      return encapsulated_client_session_;
+   247	    }
+   248	    const QuicSocketAddress& target_server_address() const {
+   249	      return target_server_address_;
+   250	    }
+   251	    void CloseContext(ContextId context_id);
+   252	    // From QuicSpdyStream::Http3DatagramVisitor.
+   253	    void OnHttp3Datagram(QuicStreamId stream_id,
+   254	                         absl::string_view payload) override;
+   255	    void OnUnknownCapsule(QuicStreamId /*stream_id*/,
+   256	                          const quiche::UnknownCapsule& /*capsule*/) override {}
+   257	
+   258	    // From QuicSpdyStream::ConnectUdpBindVisitor.
+   259	
+   260	    bool OnCompressionAssignCapsule(
+   261	        const quiche::CompressionAssignCapsule& capsule) override;
+   262	
+   263	    bool OnCompressionCloseCapsule(
+   264	        const quiche::CompressionCloseCapsule& capsule) override;
+   265	
+   266	    ContextId AllocateContextId();
+   267	
+   268	    // Get the context id for the given address if it exists or if
+   269	    // an uncompressed context exists.
+   270	    std::optional<ContextId> GetContextForAddress(
+   271	        const QuicSocketAddress& target_server_address);
+   272	    ContextId CreateCompressedContext(const QuicSocketAddress& target_address);
+   273	    ContextId CreateUncompressedContext();
+   274	    std::optional<std::string> PrepareBindPacket(
+   275	        absl::string_view packet, const QuicSocketAddress& target_address,
+   276	        bool use_uncompressed_context);
+   277	
+   278	   private:
+   279	    QuicSpdyClientStream* stream_;                            // Unowned.
+   280	    EncapsulatedClientSession* encapsulated_client_session_;  // Unowned.
+   281	    MasqueClientSession* masque_session_;                     // Unowned.
+   282	    QuicSocketAddress target_server_address_;
+   283	
+   284	    ContextId next_available_context_id_ = 2;
+   285	    absl::flat_hash_map<int, QuicSocketAddress> bind_context_ip_map_ = {};
+   286	
+   287	    bool is_bind_ = false;
+   288	  };
+   289	
+   290	  // State that the MasqueClientSession keeps for each CONNECT-IP request.
+   291	  class QUIC_NO_EXPORT ConnectIpClientState
+   292	      : public QuicSpdyStream::Http3DatagramVisitor,
+   293	        public QuicSpdyStream::ConnectIpVisitor {
+   294	   public:
+   295	    // |stream| and |encapsulated_client_session| must be valid for the lifetime
+   296	    // of the ConnectUdpClientState.
+   297	    explicit ConnectIpClientState(
+   298	        QuicSpdyClientStream* stream,
+   299	        EncapsulatedIpSession* encapsulated_ip_session,
+   300	        MasqueClientSession* masque_session);
+   301	
+   302	    ~ConnectIpClientState();
+   303	
+   304	    // Disallow copy but allow move.
+   305	    ConnectIpClientState(const ConnectIpClientState&) = delete;
+   306	    ConnectIpClientState(ConnectIpClientState&&);
+   307	    ConnectIpClientState& operator=(const ConnectIpClientState&) = delete;
+   308	    ConnectIpClientState& operator=(ConnectIpClientState&&);
+   309	
+   310	    QuicSpdyClientStream* stream() const { return stream_; }
+   311	    EncapsulatedIpSession* encapsulated_ip_session() const {
+   312	      return encapsulated_ip_session_;
+   313	    }
+   314	
+   315	    // From QuicSpdyStream::Http3DatagramVisitor.
+   316	    void OnHttp3Datagram(QuicStreamId stream_id,
+   317	                         absl::string_view payload) override;
+   318	    void OnUnknownCapsule(QuicStreamId stream_id,
+   319	                          const quiche::UnknownCapsule& capsule) override;
+   320	
+   321	    // From QuicSpdyStream::ConnectIpVisitor.
+   322	    bool OnAddressAssignCapsule(
+   323	        const quiche::AddressAssignCapsule& capsule) override;
+   324	    bool OnAddressRequestCapsule(
+   325	        const quiche::AddressRequestCapsule& capsule) override;
+   326	    bool OnRouteAdvertisementCapsule(
+   327	        const quiche::RouteAdvertisementCapsule& capsule) override;
+   328	    void OnHeadersWritten() override;
+   329	
+   330	   private:
+   331	    QuicSpdyClientStream* stream_;                    // Unowned.
+   332	    EncapsulatedIpSession* encapsulated_ip_session_;  // Unowned.
+   333	    MasqueClientSession* masque_session_;             // Unowned.
+   334	  };
+   335	
+   336	  // State that the MasqueClientSession keeps for each CONNECT-ETHERNET request.
+   337	  class QUIC_NO_EXPORT ConnectEthernetClientState
+   338	      : public QuicSpdyStream::Http3DatagramVisitor {
+   339	   public:
+   340	    // |stream| and |encapsulated_client_session| must be valid for the lifetime
+   341	    // of the ConnectUdpClientState.
+   342	    explicit ConnectEthernetClientState(
+   343	        QuicSpdyClientStream* stream,
+   344	        EncapsulatedEthernetSession* encapsulated_ethernet_session,
+   345	        MasqueClientSession* masque_session);
+   346	
+   347	    ~ConnectEthernetClientState();
+   348	
+   349	    // Disallow copy but allow move.
+   350	    ConnectEthernetClientState(const ConnectEthernetClientState&) = delete;
+   351	    ConnectEthernetClientState(ConnectEthernetClientState&&);
+   352	    ConnectEthernetClientState& operator=(const ConnectEthernetClientState&) =
+   353	        delete;
+   354	    ConnectEthernetClientState& operator=(ConnectEthernetClientState&&);
+   355	
+   356	    QuicSpdyClientStream* stream() const { return stream_; }
+   357	    EncapsulatedEthernetSession* encapsulated_ethernet_session() const {
+   358	      return encapsulated_ethernet_session_;
+   359	    }
+   360	
+   361	    // From QuicSpdyStream::Http3DatagramVisitor.
+   362	    void OnHttp3Datagram(QuicStreamId stream_id,
+   363	                         absl::string_view payload) override;
+   364	    void OnUnknownCapsule(QuicStreamId /*stream_id*/,
+   365	                          const quiche::UnknownCapsule& /*capsule*/) override {}
+   366	
+   367	   private:
+   368	    QuicSpdyClientStream* stream_;                                // Unowned.
+   369	    EncapsulatedEthernetSession* encapsulated_ethernet_session_;  // Unowned.
+   370	    MasqueClientSession* masque_session_;                         // Unowned.
+   371	  };
+   372	
+   373	  HttpDatagramSupport LocalHttpDatagramSupport() override {
+   374	    return HttpDatagramSupport::kRfc;
+   375	  }
+   376	
+   377	  // target_server_address should be set to empty
+   378	  // to create state for bind.
+   379	  ConnectUdpClientState* GetOrCreateConnectUdpClientState(
+   380	      const QuicSocketAddress& target_server_address,
+   381	      EncapsulatedClientSession* encapsulated_client_session);
+   382	
+   383	  // Send Capsule for CONNECT-UDP Bind.
+   384	  void SendBindCapsule(const quiche::Capsule& capsule,
+   385	                       EncapsulatedClientSession* encapsulated_client_session);
+   386	
+   387	  const ConnectIpClientState* GetOrCreateConnectIpClientState(
+   388	      EncapsulatedIpSession* encapsulated_ip_session);
+   389	
+   390	  const ConnectEthernetClientState* GetOrCreateConnectEthernetClientState(
+   391	      EncapsulatedEthernetSession* encapsulated_ethernet_session);
+   392	
+   393	  std::optional<std::string> ComputeConcealedAuthHeader(const QuicUrl& url);
+   394	  void AddAdditionalHeaders(quiche::HttpHeaderBlock& headers,
+   395	                            const QuicUrl& url);
+   396	
+   397	  bool IsBind() const { return masque_mode_ == MasqueMode::kConnectUdpBind; }
+   398	  MasqueMode masque_mode_ = MasqueMode::kInvalid;
+   399	  std::string uri_template_;
+   400	  std::string additional_headers_;
+   401	  std::string concealed_auth_key_id_;
+   402	  std::string concealed_auth_private_key_;
+   403	  std::string concealed_auth_public_key_;
+   404	  std::list<ConnectUdpClientState> connect_udp_client_states_;
+   405	  bool bind_use_uncompressed_context_ = false;
+   406	  std::list<ConnectIpClientState> connect_ip_client_states_;
+   407	  std::list<ConnectEthernetClientState> connect_ethernet_client_states_;
+   408	  // Maps fake addresses generated by GetFakeAddress() to their corresponding
+   409	  // hostnames.
+   410	  absl::flat_hash_map<std::string, std::string> fake_addresses_;
+   411	  Owner* owner_ = nullptr;  // Unowned;
+   412	};
+   413	
+   414	}  // namespace quic
+   415	
+   416	#endif  // QUICHE_QUIC_MASQUE_MASQUE_CLIENT_SESSION_H_

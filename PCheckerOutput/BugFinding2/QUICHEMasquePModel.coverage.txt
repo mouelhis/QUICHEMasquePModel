@@ -1,0 +1,102 @@
+Total event coverage: 67.9%
+===========================
+Monitor: BindTargetFidelity
+===========================
+Event coverage: 100.0%
+
+	State: Check
+		State event coverage: 100.0%
+		Events received: meClientPacketDelivered, meUdpReplyGenerated
+		Previous states: Check
+		Next states: Check
+
+StateMachine: BindTargetFidelityDriver
+======================================
+Event coverage: 100.0%
+
+	State: Init
+		State has no expected events, so coverage is 100%
+
+StateMachine: Http3Transport
+============================
+Event coverage: 60.0%
+
+	State: Init
+		State event coverage: 100.0%
+		Events received: eConfigureTransport
+		Events sent: eTransportReady
+		Next states: Active
+
+	State: Active
+		State event coverage: 55.6%
+		Events received: teBindContextAssign, teClientDatagram, teConnectRequest, teConnectResponse, teServerDatagram
+		Events sent: ceConnectResponse, ceHttpDatagram, seBindContextAssign, seConnectRequest, seHttpDatagram
+		Events not covered: teCloseConnection, teFlushPendingBindContexts, teFlushPendingConnects, teResetStream
+		Previous states: Init
+
+StateMachine: MasqueClientSession
+=================================
+Event coverage: 50.0%
+
+	State: Init
+		State has no expected events, so coverage is 100%
+		Next states: Active
+
+	State: Active
+		State event coverage: 50.0%
+		Events received: ceConnectResponse, ceHttpDatagram, ceSendPacket
+		Events sent: teBindContextAssign, teClientDatagram, teConnectRequest
+		Events not covered: ceCloseEncapsulatedSession, ceConnectionClosed, ceStreamClosed
+		Previous states: Init
+
+StateMachine: MasqueServerSession
+=================================
+Event coverage: 66.7%
+
+	State: Init
+		State has no expected events, so coverage is 100%
+		Next states: Active
+
+	State: Active
+		State event coverage: 66.7%
+		Events received: seBindContextAssign, seConnectRequest, seHttpDatagram, seUdpReadable
+		Events sent: teConnectResponse, teServerDatagram, ueProxyWrite
+		Events not covered: seConnectionClosed, seStreamClosed
+		Previous states: Init
+
+StateMachine: MasqueTestDriver
+==============================
+Event coverage: 100.0%
+
+	State: Init
+		State has no expected events, so coverage is 100%
+		Events sent: eConfigureTransport, eConfigureUdp
+		Next states: WaitingForEnvironment
+
+	State: WaitingForEnvironment
+		State event coverage: 100.0%
+		Events received: eTransportReady, eUdpReady
+		Previous states: Init
+		Next states: Running
+
+	State: Running
+		State has no expected events, so coverage is 100%
+		Events sent: ceSendPacket
+		Previous states: WaitingForEnvironment
+
+StateMachine: UdpEnvironment
+============================
+Event coverage: 100.0%
+
+	State: Init
+		State event coverage: 100.0%
+		Events received: eConfigureUdp
+		Events sent: eUdpReady
+		Next states: Active
+
+	State: Active
+		State event coverage: 100.0%
+		Events received: ueProxyWrite
+		Events sent: seUdpReadable
+		Previous states: Init
+

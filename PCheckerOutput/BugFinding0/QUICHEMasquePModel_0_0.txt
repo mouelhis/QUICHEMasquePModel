@@ -1,0 +1,118 @@
+<TestLog> Running test 'tcFdReuseIsolation'.
+<CreateLog> PImplementation.TunnelIsolation was created.
+<MonitorLog> PImplementation.TunnelIsolation enters state 'Check'.
+<CreateLog> FdReuseAfterCloseDriver(1) was created by task '197'.
+<StateLog> FdReuseAfterCloseDriver(1) enters state 'Init'.
+<CreateLog> MasqueTestDriver(2) was created by FdReuseAfterCloseDriver(1).
+<StateLog> MasqueTestDriver(2) enters state 'Init'.
+<CreateLog> Http3Transport(3) was created by MasqueTestDriver(2).
+<CreateLog> UdpEnvironment(4) was created by MasqueTestDriver(2).
+<StateLog> UdpEnvironment(4) enters state 'Init'.
+<StateLog> Http3Transport(3) enters state 'Init'.
+<CreateLog> MasqueServerSession(5) was created by MasqueTestDriver(2).
+<StateLog> MasqueServerSession(5) enters state 'Init'.
+<GotoLog> MasqueServerSession(5) is transitioning from state 'Init' to state 'PImplementation.MasqueServerSession.Active'.
+<StateLog> MasqueServerSession(5) exits state 'Init'.
+<StateLog> MasqueServerSession(5) enters state 'Active'.
+<CreateLog> MasqueClientSession(6) was created by MasqueTestDriver(2).
+<StateLog> MasqueClientSession(6) enters state 'Init'.
+<GotoLog> MasqueClientSession(6) is transitioning from state 'Init' to state 'PImplementation.MasqueClientSession.Active'.
+<StateLog> MasqueClientSession(6) exits state 'Init'.
+<StateLog> MasqueClientSession(6) enters state 'Active'.
+<SendLog> 'MasqueTestDriver(2)' in state 'Init' sent event 'eConfigureTransport with payload (<client:MasqueClientSession(6), server:MasqueServerSession(5), driver:MasqueTestDriver(2), config:<udpMode:0, nondetLocalFailures:False, allowDatagramLoss:False, allowDatagramBeforeRequest:False, allowBindContextDatagramReordering:False, bindUseUncompressedContext:False, closeAfterFirstClientDatagram:False, closeConnectionAfterConnectResponse:False, allowFdReuse:True, udpReplyMode:1, >, >)' to 'Http3Transport(3)'.
+<SendLog> 'MasqueTestDriver(2)' in state 'Init' sent event 'eConfigureUdp with payload (<server:MasqueServerSession(5), driver:MasqueTestDriver(2), config:<udpMode:0, nondetLocalFailures:False, allowDatagramLoss:False, allowDatagramBeforeRequest:False, allowBindContextDatagramReordering:False, bindUseUncompressedContext:False, closeAfterFirstClientDatagram:False, closeConnectionAfterConnectResponse:False, allowFdReuse:True, udpReplyMode:1, >, >)' to 'UdpEnvironment(4)'.
+<GotoLog> MasqueTestDriver(2) is transitioning from state 'Init' to state 'PImplementation.MasqueTestDriver.WaitingForEnvironment'.
+<StateLog> MasqueTestDriver(2) exits state 'Init'.
+<StateLog> MasqueTestDriver(2) enters state 'WaitingForEnvironment'.
+<DequeueLog> 'Http3Transport(3)' dequeued event 'eConfigureTransport with payload (<client:MasqueClientSession(6), server:MasqueServerSession(5), driver:MasqueTestDriver(2), config:<udpMode:0, nondetLocalFailures:False, allowDatagramLoss:False, allowDatagramBeforeRequest:False, allowBindContextDatagramReordering:False, bindUseUncompressedContext:False, closeAfterFirstClientDatagram:False, closeConnectionAfterConnectResponse:False, allowFdReuse:True, udpReplyMode:1, >, >)' in state 'Init'.
+<GotoLog> Http3Transport(3) is transitioning from state 'Init' to state 'PImplementation.Http3Transport.Active'.
+<StateLog> Http3Transport(3) exits state 'Init'.
+<DequeueLog> 'UdpEnvironment(4)' dequeued event 'eConfigureUdp with payload (<server:MasqueServerSession(5), driver:MasqueTestDriver(2), config:<udpMode:0, nondetLocalFailures:False, allowDatagramLoss:False, allowDatagramBeforeRequest:False, allowBindContextDatagramReordering:False, bindUseUncompressedContext:False, closeAfterFirstClientDatagram:False, closeConnectionAfterConnectResponse:False, allowFdReuse:True, udpReplyMode:1, >, >)' in state 'Init'.
+<GotoLog> UdpEnvironment(4) is transitioning from state 'Init' to state 'PImplementation.UdpEnvironment.Active'.
+<StateLog> UdpEnvironment(4) exits state 'Init'.
+<SendLog> 'UdpEnvironment(4)' in state 'Init' sent event 'eUdpReady' to 'MasqueTestDriver(2)'.
+<StateLog> UdpEnvironment(4) enters state 'Active'.
+<DequeueLog> 'MasqueTestDriver(2)' dequeued event 'eUdpReady' in state 'WaitingForEnvironment'.
+<SendLog> 'Http3Transport(3)' in state 'Init' sent event 'eTransportReady' to 'MasqueTestDriver(2)'.
+<StateLog> Http3Transport(3) enters state 'Active'.
+<DequeueLog> 'MasqueTestDriver(2)' dequeued event 'eTransportReady' in state 'WaitingForEnvironment'.
+<GotoLog> MasqueTestDriver(2) is transitioning from state 'WaitingForEnvironment' to state 'PImplementation.MasqueTestDriver.Running'.
+<StateLog> MasqueTestDriver(2) exits state 'WaitingForEnvironment'.
+<StateLog> MasqueTestDriver(2) enters state 'Running'.
+<SendLog> 'MasqueTestDriver(2)' in state 'Running' sent event 'ceSendPacket with payload (<encapsulatedSessionId:1, target:<host:10, port:443, >, packet:<id:1, dataClass:0, >, >)' to 'MasqueClientSession(6)'.
+<DequeueLog> 'MasqueClientSession(6)' dequeued event 'ceSendPacket with payload (<encapsulatedSessionId:1, target:<host:10, port:443, >, packet:<id:1, dataClass:0, >, >)' in state 'Active'.
+<SendLog> 'MasqueClientSession(6)' in state 'Active' sent event 'teConnectRequest with payload (<connectionId:1, streamId:0, headers:<methodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:<host:10, port:443, >, >, client:MasqueClientSession(6), >)' to 'Http3Transport(3)'.
+<AnnounceLog> 'MasqueClientSession(6)' announced event 'meClientTunnelCreated' with payload <connectionId:1, streamId:0, encapsulatedSessionId:1, target:<host:10, port:443, >, isBind:False, >.
+<MonitorLog> TunnelIsolation is processing event 'meClientTunnelCreated with payload (<connectionId:1, streamId:0, encapsulatedSessionId:1, target:<host:10, port:443, >, isBind:False, >)' in state 'Check'.
+<AnnounceLog> 'MasqueClientSession(6)' announced event 'meClientDatagramApiAccepted' with payload <connectionId:1, streamId:0, encapsulatedSessionId:1, target:<host:10, port:443, >, isBind:False, contextId:0, packetId:1, >.
+<SendLog> 'MasqueClientSession(6)' in state 'Active' sent event 'teClientDatagram with payload (<connectionId:1, streamId:0, contextId:0, hasInlineTarget:False, inlineTarget:<host:0, port:0, >, packet:<id:1, dataClass:0, >, >)' to 'Http3Transport(3)'.
+<SendLog> 'MasqueTestDriver(2)' in state 'Running' sent event 'ceCloseEncapsulatedSession with payload (1)' to 'MasqueClientSession(6)'.
+<DequeueLog> 'Http3Transport(3)' dequeued event 'teConnectRequest with payload (<connectionId:1, streamId:0, headers:<methodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:<host:10, port:443, >, >, client:MasqueClientSession(6), >)' in state 'Active'.
+<SendLog> 'Http3Transport(3)' in state 'Active' sent event 'seConnectRequest with payload (<connectionId:1, streamId:0, headers:<methodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:<host:10, port:443, >, >, client:MasqueClientSession(6), >)' to 'MasqueServerSession(5)'.
+<SendLog> 'MasqueTestDriver(2)' in state 'Running' sent event 'ceSendPacket with payload (<encapsulatedSessionId:2, target:<host:20, port:8443, >, packet:<id:2, dataClass:0, >, >)' to 'MasqueClientSession(6)'.
+<DequeueLog> 'MasqueClientSession(6)' dequeued event 'ceCloseEncapsulatedSession with payload (1)' in state 'Active'.
+<AnnounceLog> 'MasqueClientSession(6)' announced event 'meClientTunnelRemoved' with payload <connectionId:1, streamId:0, encapsulatedSessionId:1, target:<host:10, port:443, >, isBind:False, >.
+<MonitorLog> TunnelIsolation is processing event 'meClientTunnelRemoved with payload (<connectionId:1, streamId:0, encapsulatedSessionId:1, target:<host:10, port:443, >, isBind:False, >)' in state 'Check'.
+<SendLog> 'MasqueClientSession(6)' in state 'Active' sent event 'teResetStream with payload (0)' to 'Http3Transport(3)'.
+<DequeueLog> 'MasqueClientSession(6)' dequeued event 'ceSendPacket with payload (<encapsulatedSessionId:2, target:<host:20, port:8443, >, packet:<id:2, dataClass:0, >, >)' in state 'Active'.
+<DequeueLog> 'MasqueServerSession(5)' dequeued event 'seConnectRequest with payload (<connectionId:1, streamId:0, headers:<methodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:<host:10, port:443, >, >, client:MasqueClientSession(6), >)' in state 'Active'.
+<AnnounceLog> 'MasqueServerSession(5)' announced event 'meServerTunnelCreated' with payload <connectionId:1, streamId:0, fdId:100, target:<host:10, port:443, >, isBind:False, >.
+<MonitorLog> TunnelIsolation is processing event 'meServerTunnelCreated with payload (<connectionId:1, streamId:0, fdId:100, target:<host:10, port:443, >, isBind:False, >)' in state 'Check'.
+<DequeueLog> 'Http3Transport(3)' dequeued event 'teClientDatagram with payload (<connectionId:1, streamId:0, contextId:0, hasInlineTarget:False, inlineTarget:<host:0, port:0, >, packet:<id:1, dataClass:0, >, >)' in state 'Active'.
+<SendLog> 'MasqueClientSession(6)' in state 'Active' sent event 'teConnectRequest with payload (<connectionId:1, streamId:4, headers:<methodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:<host:20, port:8443, >, >, client:MasqueClientSession(6), >)' to 'Http3Transport(3)'.
+<AnnounceLog> 'MasqueClientSession(6)' announced event 'meClientTunnelCreated' with payload <connectionId:1, streamId:4, encapsulatedSessionId:2, target:<host:20, port:8443, >, isBind:False, >.
+<MonitorLog> TunnelIsolation is processing event 'meClientTunnelCreated with payload (<connectionId:1, streamId:4, encapsulatedSessionId:2, target:<host:20, port:8443, >, isBind:False, >)' in state 'Check'.
+<AnnounceLog> 'MasqueClientSession(6)' announced event 'meClientDatagramApiAccepted' with payload <connectionId:1, streamId:4, encapsulatedSessionId:2, target:<host:20, port:8443, >, isBind:False, contextId:0, packetId:2, >.
+<SendLog> 'Http3Transport(3)' in state 'Active' sent event 'seHttpDatagram with payload (<connectionId:1, streamId:0, contextId:0, hasInlineTarget:False, inlineTarget:<host:0, port:0, >, packet:<id:1, dataClass:0, >, >)' to 'MasqueServerSession(5)'.
+<DequeueLog> 'Http3Transport(3)' dequeued event 'teResetStream with payload (0)' in state 'Active'.
+<SendLog> 'MasqueClientSession(6)' in state 'Active' sent event 'teClientDatagram with payload (<connectionId:1, streamId:4, contextId:0, hasInlineTarget:False, inlineTarget:<host:0, port:0, >, packet:<id:2, dataClass:0, >, >)' to 'Http3Transport(3)'.
+<SendLog> 'Http3Transport(3)' in state 'Active' sent event 'ceStreamClosed with payload (0)' to 'MasqueClientSession(6)'.
+<DequeueLog> 'MasqueClientSession(6)' dequeued event 'ceStreamClosed with payload (0)' in state 'Active'.
+<SendLog> 'Http3Transport(3)' in state 'Active' sent event 'seStreamClosed with payload (0)' to 'MasqueServerSession(5)'.
+<SendLog> 'MasqueServerSession(5)' in state 'Active' sent event 'teConnectResponse with payload (<connectionId:1, streamId:0, responseClass:0, client:MasqueClientSession(6), >)' to 'Http3Transport(3)'.
+<DequeueLog> 'MasqueServerSession(5)' dequeued event 'seHttpDatagram with payload (<connectionId:1, streamId:0, contextId:0, hasInlineTarget:False, inlineTarget:<host:0, port:0, >, packet:<id:1, dataClass:0, >, >)' in state 'Active'.
+<AnnounceLog> 'MasqueServerSession(5)' announced event 'meProxyDatagramForwardedToTarget' with payload <connectionId:1, streamId:0, fdId:100, target:<host:10, port:443, >, isBind:False, contextId:0, packetId:1, >.
+<MonitorLog> TunnelIsolation is processing event 'meProxyDatagramForwardedToTarget with payload (<connectionId:1, streamId:0, fdId:100, target:<host:10, port:443, >, isBind:False, contextId:0, packetId:1, >)' in state 'Check'.
+<DequeueLog> 'Http3Transport(3)' dequeued event 'teConnectRequest with payload (<connectionId:1, streamId:4, headers:<methodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:<host:20, port:8443, >, >, client:MasqueClientSession(6), >)' in state 'Active'.
+<SendLog> 'Http3Transport(3)' in state 'Active' sent event 'seConnectRequest with payload (<connectionId:1, streamId:4, headers:<methodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:<host:20, port:8443, >, >, client:MasqueClientSession(6), >)' to 'MasqueServerSession(5)'.
+<DequeueLog> 'Http3Transport(3)' dequeued event 'teClientDatagram with payload (<connectionId:1, streamId:4, contextId:0, hasInlineTarget:False, inlineTarget:<host:0, port:0, >, packet:<id:2, dataClass:0, >, >)' in state 'Active'.
+<SendLog> 'Http3Transport(3)' in state 'Active' sent event 'seHttpDatagram with payload (<connectionId:1, streamId:4, contextId:0, hasInlineTarget:False, inlineTarget:<host:0, port:0, >, packet:<id:2, dataClass:0, >, >)' to 'MasqueServerSession(5)'.
+<DequeueLog> 'Http3Transport(3)' dequeued event 'teConnectResponse with payload (<connectionId:1, streamId:0, responseClass:0, client:MasqueClientSession(6), >)' in state 'Active'.
+<SendLog> 'MasqueServerSession(5)' in state 'Active' sent event 'ueProxyWrite with payload (<connectionId:1, streamId:0, fdId:100, target:<host:10, port:443, >, isBind:False, contextId:0, packet:<id:1, dataClass:0, >, server:MasqueServerSession(5), >)' to 'UdpEnvironment(4)'.
+<DequeueLog> 'UdpEnvironment(4)' dequeued event 'ueProxyWrite with payload (<connectionId:1, streamId:0, fdId:100, target:<host:10, port:443, >, isBind:False, contextId:0, packet:<id:1, dataClass:0, >, server:MasqueServerSession(5), >)' in state 'Active'.
+<AnnounceLog> 'UdpEnvironment(4)' announced event 'meTargetReceivedPacket' with payload <connectionId:1, streamId:0, fdId:100, target:<host:10, port:443, >, isBind:False, contextId:0, packetId:1, >.
+<AnnounceLog> 'UdpEnvironment(4)' announced event 'meUdpReplyGenerated' with payload <connectionId:1, expectedStreamId:0, expectedFdId:100, expectedTarget:<host:10, port:443, >, expectedContextId:0, isBind:False, source:<host:10, port:443, >, validSource:True, packetId:1001, >.
+<MonitorLog> TunnelIsolation is processing event 'meUdpReplyGenerated with payload (<connectionId:1, expectedStreamId:0, expectedFdId:100, expectedTarget:<host:10, port:443, >, expectedContextId:0, isBind:False, source:<host:10, port:443, >, validSource:True, packetId:1001, >)' in state 'Check'.
+<SendLog> 'Http3Transport(3)' in state 'Active' sent event 'ceConnectResponse with payload (<connectionId:1, streamId:0, responseClass:0, client:MasqueClientSession(6), >)' to 'MasqueClientSession(6)'.
+<DequeueLog> 'MasqueClientSession(6)' dequeued event 'ceConnectResponse with payload (<connectionId:1, streamId:0, responseClass:0, client:MasqueClientSession(6), >)' in state 'Active'.
+<AnnounceLog> 'MasqueClientSession(6)' announced event 'meConnectResponseObserved' with payload <connectionId:1, streamId:0, responseClass:0, >.
+<DequeueLog> 'MasqueServerSession(5)' dequeued event 'seStreamClosed with payload (0)' in state 'Active'.
+<AnnounceLog> 'MasqueServerSession(5)' announced event 'meServerTunnelRemoved' with payload <connectionId:1, streamId:0, fdId:100, target:<host:10, port:443, >, isBind:False, >.
+<MonitorLog> TunnelIsolation is processing event 'meServerTunnelRemoved with payload (<connectionId:1, streamId:0, fdId:100, target:<host:10, port:443, >, isBind:False, >)' in state 'Check'.
+<DequeueLog> 'MasqueServerSession(5)' dequeued event 'seConnectRequest with payload (<connectionId:1, streamId:4, headers:<methodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:<host:20, port:8443, >, >, client:MasqueClientSession(6), >)' in state 'Active'.
+<RandomLog> MasqueServerSession(5) nondeterministically chose 'True'.
+<AnnounceLog> 'MasqueServerSession(5)' announced event 'meServerTunnelCreated' with payload <connectionId:1, streamId:4, fdId:100, target:<host:20, port:8443, >, isBind:False, >.
+<MonitorLog> TunnelIsolation is processing event 'meServerTunnelCreated with payload (<connectionId:1, streamId:4, fdId:100, target:<host:20, port:8443, >, isBind:False, >)' in state 'Check'.
+<SendLog> 'UdpEnvironment(4)' in state 'Active' sent event 'seUdpReadable with payload (<connectionId:1, fdId:100, source:<host:10, port:443, >, packet:<id:1001, dataClass:0, >, >)' to 'MasqueServerSession(5)'.
+<SendLog> 'MasqueServerSession(5)' in state 'Active' sent event 'teConnectResponse with payload (<connectionId:1, streamId:4, responseClass:0, client:MasqueClientSession(6), >)' to 'Http3Transport(3)'.
+<DequeueLog> 'Http3Transport(3)' dequeued event 'teConnectResponse with payload (<connectionId:1, streamId:4, responseClass:0, client:MasqueClientSession(6), >)' in state 'Active'.
+<SendLog> 'Http3Transport(3)' in state 'Active' sent event 'ceConnectResponse with payload (<connectionId:1, streamId:4, responseClass:0, client:MasqueClientSession(6), >)' to 'MasqueClientSession(6)'.
+<DequeueLog> 'MasqueServerSession(5)' dequeued event 'seHttpDatagram with payload (<connectionId:1, streamId:4, contextId:0, hasInlineTarget:False, inlineTarget:<host:0, port:0, >, packet:<id:2, dataClass:0, >, >)' in state 'Active'.
+<AnnounceLog> 'MasqueServerSession(5)' announced event 'meProxyDatagramForwardedToTarget' with payload <connectionId:1, streamId:4, fdId:100, target:<host:20, port:8443, >, isBind:False, contextId:0, packetId:2, >.
+<MonitorLog> TunnelIsolation is processing event 'meProxyDatagramForwardedToTarget with payload (<connectionId:1, streamId:4, fdId:100, target:<host:20, port:8443, >, isBind:False, contextId:0, packetId:2, >)' in state 'Check'.
+<SendLog> 'MasqueServerSession(5)' in state 'Active' sent event 'ueProxyWrite with payload (<connectionId:1, streamId:4, fdId:100, target:<host:20, port:8443, >, isBind:False, contextId:0, packet:<id:2, dataClass:0, >, server:MasqueServerSession(5), >)' to 'UdpEnvironment(4)'.
+<DequeueLog> 'MasqueClientSession(6)' dequeued event 'ceConnectResponse with payload (<connectionId:1, streamId:4, responseClass:0, client:MasqueClientSession(6), >)' in state 'Active'.
+<AnnounceLog> 'MasqueClientSession(6)' announced event 'meConnectResponseObserved' with payload <connectionId:1, streamId:4, responseClass:0, >.
+<DequeueLog> 'MasqueServerSession(5)' dequeued event 'seUdpReadable with payload (<connectionId:1, fdId:100, source:<host:10, port:443, >, packet:<id:1001, dataClass:0, >, >)' in state 'Active'.
+<AnnounceLog> 'MasqueServerSession(5)' announced event 'meUdpReadableObserved' with payload <connectionId:1, fdId:100, source:<host:10, port:443, >, expectedTarget:<host:20, port:8443, >, packetId:1001, >.
+<AnnounceLog> 'MasqueServerSession(5)' announced event 'meUnexpectedUdpDropped' with payload <connectionId:1, fdId:100, source:<host:10, port:443, >, expectedTarget:<host:20, port:8443, >, packetId:1001, >.
+<MonitorLog> TunnelIsolation is processing event 'meUnexpectedUdpDropped with payload (<connectionId:1, fdId:100, source:<host:10, port:443, >, expectedTarget:<host:20, port:8443, >, packetId:1001, >)' in state 'Check'.
+<ErrorLog> Assertion Failed: PSpec/TunnelIsolation.p:167:21 Valid UDP reply <connectionId:1, packetId:1001, > was rejected as unexpected; expected stream 0, fd 100, target <host:10, port:443, >
+<StrategyLog> Found bug using 'random' strategy.
+<StrategyLog> Checking statistics:
+<StrategyLog> Found 1 bug.
+<StrategyLog> Scheduling statistics:
+<StrategyLog> Explored 9 schedules
+<StrategyLog> Explored 8 timelines
+<StrategyLog> Found 11.11% buggy schedules.
+<StrategyLog> Number of scheduling points in terminating schedules: 62 (min), 70 (avg), 73 (max).

@@ -1,0 +1,1200 @@
+     1	// Copyright 2019 The Chromium Authors. All rights reserved.
+     2	// Use of this source code is governed by a BSD-style license that can be
+     3	// found in the LICENSE file.
+     4	
+     5	#include "quiche/quic/masque/masque_client_session.h"
+     6	
+     7	#include <cstdint>
+     8	#include <cstring>
+     9	#include <optional>
+    10	#include <string>
+    11	#include <utility>
+    12	#include <vector>
+    13	
+    14	#include "absl/container/flat_hash_map.h"
+    15	#include "absl/container/flat_hash_set.h"
+    16	#include "absl/strings/escaping.h"
+    17	#include "absl/strings/str_cat.h"
+    18	#include "absl/strings/str_replace.h"
+    19	#include "absl/strings/str_split.h"
+    20	#include "absl/strings/string_view.h"
+    21	#include "openssl/curve25519.h"
+    22	#include "quiche/quic/core/crypto/quic_crypto_client_config.h"
+    23	#include "quiche/quic/core/frames/quic_connection_close_frame.h"
+    24	#include "quiche/quic/core/http/http_frames.h"
+    25	#include "quiche/quic/core/http/quic_spdy_client_session.h"
+    26	#include "quiche/quic/core/http/quic_spdy_client_stream.h"
+    27	#include "quiche/quic/core/http/quic_spdy_stream.h"
+    28	#include "quiche/quic/core/quic_config.h"
+    29	#include "quiche/quic/core/quic_connection.h"
+    30	#include "quiche/quic/core/quic_data_reader.h"
+    31	#include "quiche/quic/core/quic_data_writer.h"
+    32	#include "quiche/quic/core/quic_error_codes.h"
+    33	#include "quiche/quic/core/quic_server_id.h"
+    34	#include "quiche/quic/core/quic_time.h"
+    35	#include "quiche/quic/core/quic_types.h"
+    36	#include "quiche/quic/core/quic_utils.h"
+    37	#include "quiche/quic/core/quic_versions.h"
+    38	#include "quiche/quic/masque/masque_utils.h"
+    39	#include "quiche/quic/platform/api/quic_bug_tracker.h"
+    40	#include "quiche/quic/platform/api/quic_logging.h"
+    41	#include "quiche/quic/platform/api/quic_socket_address.h"
+    42	#include "quiche/quic/tools/quic_url.h"
+    43	#include "quiche/common/capsule.h"
+    44	#include "quiche/common/http/http_header_block.h"
+    45	#include "quiche/common/platform/api/quiche_googleurl.h"
+    46	#include "quiche/common/platform/api/quiche_logging.h"
+    47	#include "quiche/common/platform/api/quiche_url_utils.h"
+    48	#include "quiche/common/quiche_ip_address.h"
+    49	#include "quiche/common/quiche_random.h"
+    50	#include "quiche/common/quiche_text_utils.h"
+    51	
+    52	namespace quic {
+    53	
+    54	namespace {
+    55	
+    56	using ::quiche::AddressAssignCapsule;
+    57	using ::quiche::AddressRequestCapsule;
+    58	using ::quiche::RouteAdvertisementCapsule;
+    59	using ContextId = MasqueClientSession::ContextId;
+    60	
+    61	constexpr MasqueClientSession::ContextId kConnectIpPayloadContextId = 0;
+    62	constexpr MasqueClientSession::ContextId kConnectEthernetPayloadContextId = 0;
+    63	}  // namespace
+    64	
+    65	MasqueClientSession::MasqueClientSession(
+    66	    MasqueMode masque_mode, const std::string& uri_template,
+    67	    const QuicConfig& config, const ParsedQuicVersionVector& supported_versions,
+    68	    QuicConnection* connection, const QuicServerId& server_id,
+    69	    QuicCryptoClientConfig* crypto_config, Owner* owner)
+    70	    : QuicSpdyClientSession(config, supported_versions, connection, server_id,
+    71	                            crypto_config),
+    72	      masque_mode_(masque_mode),
+    73	      uri_template_(uri_template),
+    74	      owner_(owner) {
+    75	  QUICHE_CHECK(!QuicUrl(uri_template_).host().empty());
+    76	  // We don't currently use `masque_mode_` but will in the future. To silence
+    77	  // clang's `-Wunused-private-field` warning for this when building QUICHE for
+    78	  // Chrome, add a use of it here.
+    79	  (void)masque_mode_;
+    80	}
+    81	
+    82	MasqueClientSession::MasqueClientSession(
+    83	    const QuicConfig& config, const ParsedQuicVersionVector& supported_versions,
+    84	    QuicConnection* connection, const QuicServerId& server_id,
+    85	    QuicCryptoClientConfig* crypto_config, Owner* owner)
+    86	    : QuicSpdyClientSession(config, supported_versions, connection, server_id,
+    87	                            crypto_config),
+    88	      owner_(owner) {}
+    89	
+    90	void MasqueClientSession::OnDatagramAcked(QuicDatagramId datagram_id) {
+    91	  QUIC_DVLOG(1) << "Received ack for DATAGRAM frame " << datagram_id;
+    92	}
+    93	
+    94	void MasqueClientSession::OnDatagramLost(QuicDatagramId datagram_id) {
+    95	  QUIC_DVLOG(1) << "We believe DATAGRAM frame " << datagram_id << " was lost";
+    96	}
+    97	
+    98	MasqueClientSession::ConnectUdpClientState*
+    99	MasqueClientSession::GetOrCreateConnectUdpClientState(
+   100	    const QuicSocketAddress& target_server_address,
+   101	    EncapsulatedClientSession* encapsulated_client_session) {
+   102	  for (ConnectUdpClientState& client_state : connect_udp_client_states_) {
+   103	    if (client_state.target_server_address() == target_server_address &&
+   104	        client_state.encapsulated_client_session() ==
+   105	            encapsulated_client_session &&
+   106	        IsBind() == client_state.is_bind()) {
+   107	      // Found existing CONNECT-UDP request.
+   108	      return &client_state;
+   109	    }
+   110	  }
+   111	
+   112	  QUIC_DLOG(INFO) << "No existing state non bind state found, create one";
+   113	  // No CONNECT-UDP request found, create a new one.
+   114	  std::string target_host, target_port;
+   115	
+   116	  if (IsBind()) {
+   117	    target_host = "*";
+   118	    target_port = "*";
+   119	  } else {
+   120	    auto it =
+   121	        fake_addresses_.find(target_server_address.host().ToPackedString());
+   122	    if (it != fake_addresses_.end()) {
+   123	      target_host = it->second;
+   124	    } else {
+   125	      target_host = target_server_address.host().ToString();
+   126	    }
+   127	    target_port = absl::StrCat(target_server_address.port());
+   128	  }
+   129	  QUICHE_CHECK(!target_host.empty());
+   130	
+   131	  url::Parsed parsed_uri_template;
+   132	  url::ParseStandardURL(uri_template_.c_str(), uri_template_.length(),
+   133	                        &parsed_uri_template);
+   134	  if (!parsed_uri_template.path.is_nonempty()) {
+   135	    QUIC_BUG(bad URI template path)
+   136	        << connection_id() << ": Cannot parse path from URI template \""
+   137	        << uri_template_ << "\"";
+   138	    return nullptr;
+   139	  }
+   140	  std::string path = uri_template_.substr(parsed_uri_template.path.begin,
+   141	                                          parsed_uri_template.path.len);
+   142	  if (parsed_uri_template.query.is_valid()) {
+   143	    absl::StrAppend(&path, "?",
+   144	                    uri_template_.substr(parsed_uri_template.query.begin,
+   145	                                         parsed_uri_template.query.len));
+   146	  }
+   147	  absl::flat_hash_map<std::string, std::string> parameters;
+   148	  // TODO(abhisinghx): Remove this hack.
+   149	  // ExpandURITemplate, does not encode * as %2A.
+   150	  // Therefore to meet the spec, we need to do it manually.
+   151	  if (IsBind()) {
+   152	    parameters["target_host"] = "HackyStringForBind";
+   153	    parameters["target_port"] = "HackyStringForBind";
+   154	  } else {
+   155	    parameters["target_host"] = target_host;
+   156	    parameters["target_port"] = target_port;
+   157	  }
+   158	
+   159	  std::string expanded_path;
+   160	  absl::flat_hash_set<std::string> vars_found;
+   161	  bool expanded =
+   162	      quiche::ExpandURITemplate(path, parameters, &expanded_path, &vars_found);
+   163	  if (!expanded || vars_found.find("target_host") == vars_found.end() ||
+   164	      vars_found.find("target_port") == vars_found.end()) {
+   165	    QUIC_DLOG(ERROR) << "Failed to expand URI template \"" << uri_template_
+   166	                     << "\" for " << target_host << " port "
+   167	                     << target_server_address.port();
+   168	    return nullptr;
+   169	  }
+   170	  if (IsBind()) {
+   171	    expanded_path =
+   172	        absl::StrReplaceAll(expanded_path, {{"HackyStringForBind", "%2A"}});
+   173	  }
+   174	
+   175	  url::Component expanded_path_component(0, expanded_path.length());
+   176	  url::RawCanonOutput<1024> canonicalized_path_output;
+   177	  url::Component canonicalized_path_component;
+   178	  bool canonicalized = url::CanonicalizePath(
+   179	      expanded_path.c_str(), expanded_path_component,
+   180	      &canonicalized_path_output, &canonicalized_path_component);
+   181	  if (!canonicalized || !canonicalized_path_component.is_nonempty()) {
+   182	    QUIC_DLOG(ERROR) << "Failed to canonicalize URI template \""
+   183	                     << uri_template_ << "\" for " << target_host << " port "
+   184	                     << target_server_address.port();
+   185	    return nullptr;
+   186	  }
+   187	  std::string canonicalized_path(
+   188	      canonicalized_path_output.data() + canonicalized_path_component.begin,
+   189	      canonicalized_path_component.len);
+   190	
+   191	  QuicSpdyClientStream* stream = CreateOutgoingBidirectionalStream();
+   192	  if (stream == nullptr) {
+   193	    // Stream flow control limits prevented us from opening a new stream.
+   194	    QUIC_DLOG(ERROR) << "Failed to open CONNECT-UDP stream";
+   195	    return nullptr;
+   196	  }
+   197	
+   198	  QuicUrl url(uri_template_);
+   199	  std::string scheme = url.scheme();
+   200	  std::string authority = url.HostPort();
+   201	
+   202	  QUIC_DLOG(INFO) << "Sending CONNECT-UDP request for " << target_host
+   203	                  << " port " << target_server_address.port() << " on stream "
+   204	                  << stream->id() << " scheme=\"" << scheme << "\" authority=\""
+   205	                  << authority << "\" path=\"" << canonicalized_path << "\"";
+   206	
+   207	  // Send the request.
+   208	  quiche::HttpHeaderBlock headers;
+   209	  headers[":method"] = "CONNECT";
+   210	  headers[":protocol"] = "connect-udp";
+   211	  headers[":scheme"] = scheme;
+   212	  headers[":authority"] = authority;
+   213	  headers[":path"] = canonicalized_path;
+   214	  if (IsBind()) {
+   215	    headers["connect-udp-bind"] = "?1";
+   216	  }
+   217	  AddAdditionalHeaders(headers, url);
+   218	  QUIC_DVLOG(1) << "Sending request headers: " << headers.DebugString();
+   219	  size_t bytes_sent =
+   220	      stream->SendRequest(std::move(headers), /*body=*/"", /*fin=*/false);
+   221	  if (bytes_sent == 0) {
+   222	    QUIC_DLOG(ERROR) << "Failed to send CONNECT-UDP request";
+   223	    return nullptr;
+   224	  }
+   225	
+   226	  connect_udp_client_states_.push_back(ConnectUdpClientState(
+   227	      stream, encapsulated_client_session, this, target_server_address));
+   228	  if (IsBind()) {
+   229	    QUIC_DLOG(INFO) << "Creating bind state";
+   230	    connect_udp_client_states_.back().set_is_bind(true);
+   231	  }
+   232	  return &connect_udp_client_states_.back();
+   233	}
+   234	
+   235	const MasqueClientSession::ConnectIpClientState*
+   236	MasqueClientSession::GetOrCreateConnectIpClientState(
+   237	    MasqueClientSession::EncapsulatedIpSession* encapsulated_ip_session) {
+   238	  for (const ConnectIpClientState& client_state : connect_ip_client_states_) {
+   239	    if (client_state.encapsulated_ip_session() == encapsulated_ip_session) {
+   240	      // Found existing CONNECT-IP request.
+   241	      return &client_state;
+   242	    }
+   243	  }
+   244	  // No CONNECT-IP request found, create a new one.
+   245	  QuicSpdyClientStream* stream = CreateOutgoingBidirectionalStream();
+   246	  if (stream == nullptr) {
+   247	    // Stream flow control limits prevented us from opening a new stream.
+   248	    QUIC_DLOG(ERROR) << "Failed to open CONNECT-IP stream";
+   249	    return nullptr;
+   250	  }
+   251	
+   252	  QuicUrl url(uri_template_);
+   253	  std::string scheme = url.scheme();
+   254	  std::string authority = url.HostPort();
+   255	  std::string path = "/.well-known/masque/ip/*/*/";
+   256	
+   257	  QUIC_DLOG(INFO) << "Sending CONNECT-IP request on stream " << stream->id()
+   258	                  << " scheme=\"" << scheme << "\" authority=\"" << authority
+   259	                  << "\" path=\"" << path << "\"";
+   260	
+   261	  // Send the request.
+   262	  quiche::HttpHeaderBlock headers;
+   263	  headers[":method"] = "CONNECT";
+   264	  headers[":protocol"] = "connect-ip";
+   265	  headers[":scheme"] = scheme;
+   266	  headers[":authority"] = authority;
+   267	  headers[":path"] = path;
+   268	  headers["connect-ip-version"] = "3";
+   269	  AddAdditionalHeaders(headers, url);
+   270	  QUIC_DVLOG(1) << "Sending request headers: " << headers.DebugString();
+   271	  size_t bytes_sent =
+   272	      stream->SendRequest(std::move(headers), /*body=*/"", /*fin=*/false);
+   273	  if (bytes_sent == 0) {
+   274	    QUIC_DLOG(ERROR) << "Failed to send CONNECT-IP request";
+   275	    return nullptr;
+   276	  }
+   277	
+   278	  connect_ip_client_states_.push_back(
+   279	      ConnectIpClientState(stream, encapsulated_ip_session, this));
+   280	  return &connect_ip_client_states_.back();
+   281	}
+   282	
+   283	const MasqueClientSession::ConnectEthernetClientState*
+   284	MasqueClientSession::GetOrCreateConnectEthernetClientState(
+   285	    MasqueClientSession::EncapsulatedEthernetSession*
+   286	        encapsulated_ethernet_session) {
+   287	  for (const ConnectEthernetClientState& client_state :
+   288	       connect_ethernet_client_states_) {
+   289	    if (client_state.encapsulated_ethernet_session() ==
+   290	        encapsulated_ethernet_session) {
+   291	      // Found existing CONNECT-ETHERNET request.
+   292	      return &client_state;
+   293	    }
+   294	  }
+   295	  // No CONNECT-ETHERNET request found, create a new one.
+   296	  QuicSpdyClientStream* stream = CreateOutgoingBidirectionalStream();
+   297	  if (stream == nullptr) {
+   298	    // Stream flow control limits prevented us from opening a new stream.
+   299	    QUIC_DLOG(ERROR) << "Failed to open CONNECT-ETHERNET stream";
+   300	    return nullptr;
+   301	  }
+   302	
+   303	  QuicUrl url(uri_template_);
+   304	  std::string scheme = url.scheme();
+   305	  std::string authority = url.HostPort();
+   306	  std::string path = "/.well-known/masque/ethernet/";
+   307	
+   308	  QUIC_DLOG(INFO) << "Sending CONNECT-ETHERNET request on stream "
+   309	                  << stream->id() << " scheme=\"" << scheme << "\" authority=\""
+   310	                  << authority << "\" path=\"" << path << "\"";
+   311	
+   312	  // Send the request.
+   313	  quiche::HttpHeaderBlock headers;
+   314	  headers[":method"] = "CONNECT";
+   315	  headers[":protocol"] = "connect-ethernet";
+   316	  headers[":scheme"] = scheme;
+   317	  headers[":authority"] = authority;
+   318	  headers[":path"] = path;
+   319	  AddAdditionalHeaders(headers, url);
+   320	  QUIC_DVLOG(1) << "Sending request headers: " << headers.DebugString();
+   321	  size_t bytes_sent =
+   322	      stream->SendRequest(std::move(headers), /*body=*/"", /*fin=*/false);
+   323	  if (bytes_sent == 0) {
+   324	    QUIC_DLOG(ERROR) << "Failed to send CONNECT-ETHERNET request";
+   325	    return nullptr;
+   326	  }
+   327	
+   328	  connect_ethernet_client_states_.push_back(
+   329	      ConnectEthernetClientState(stream, encapsulated_ethernet_session, this));
+   330	  return &connect_ethernet_client_states_.back();
+   331	}
+   332	
+   333	void MasqueClientSession::SendIpPacket(
+   334	    absl::string_view packet,
+   335	    MasqueClientSession::EncapsulatedIpSession* encapsulated_ip_session) {
+   336	  const ConnectIpClientState* connect_ip =
+   337	      GetOrCreateConnectIpClientState(encapsulated_ip_session);
+   338	  if (connect_ip == nullptr) {
+   339	    QUIC_DLOG(ERROR) << "Failed to create CONNECT-IP request";
+   340	    return;
+   341	  }
+   342	
+   343	  std::string http_payload;
+   344	  http_payload.resize(
+   345	      QuicDataWriter::GetVarInt62Len(kConnectIpPayloadContextId) +
+   346	      packet.size());
+   347	  QuicDataWriter writer(http_payload.size(), http_payload.data());
+   348	  if (!writer.WriteVarInt62(kConnectIpPayloadContextId)) {
+   349	    QUIC_BUG(IP context write fail) << "Failed to write CONNECT-IP context ID";
+   350	    return;
+   351	  }
+   352	  if (!writer.WriteStringPiece(packet)) {
+   353	    QUIC_BUG(IP packet write fail) << "Failed to write CONNECT-IP packet";
+   354	    return;
+   355	  }
+   356	  DatagramStatus message_status =
+   357	      SendHttp3Datagram(connect_ip->stream()->id(), http_payload);
+   358	
+   359	  QUIC_DVLOG(1) << "Sent encapsulated IP packet of length " << packet.size()
+   360	                << " with stream ID " << connect_ip->stream()->id()
+   361	                << " and got message status "
+   362	                << DatagramStatusToString(message_status);
+   363	}
+   364	
+   365	void MasqueClientSession::SendDnsAssignCapsule(
+   366	    const DnsAssignCapsule& capsule,
+   367	    MasqueClientSession::EncapsulatedIpSession* encapsulated_ip_session) {
+   368	  const ConnectIpClientState* connect_ip =
+   369	      GetOrCreateConnectIpClientState(encapsulated_ip_session);
+   370	  if (connect_ip == nullptr) {
+   371	    QUIC_LOG(ERROR) << "Failed to get CONNECT-IP request for DNS_ASSIGN";
+   372	    return;
+   373	  }
+   374	  WriteDnsAssignCapsule(connect_ip->stream(), capsule);
+   375	}
+   376	
+   377	void MasqueClientSession::SendPref64Capsule(
+   378	    const Pref64Capsule& capsule,
+   379	    MasqueClientSession::EncapsulatedIpSession* encapsulated_ip_session) {
+   380	  const ConnectIpClientState* connect_ip =
+   381	      GetOrCreateConnectIpClientState(encapsulated_ip_session);
+   382	  if (connect_ip == nullptr) {
+   383	    QUIC_LOG(ERROR) << "Failed to get CONNECT-IP request for PREF64";
+   384	    return;
+   385	  }
+   386	  WritePref64Capsule(connect_ip->stream(), capsule);
+   387	}
+   388	
+   389	void MasqueClientSession::SendEthernetFrame(
+   390	    absl::string_view frame, MasqueClientSession::EncapsulatedEthernetSession*
+   391	                                 encapsulated_ethernet_session) {
+   392	  const ConnectEthernetClientState* connect_ethernet =
+   393	      GetOrCreateConnectEthernetClientState(encapsulated_ethernet_session);
+   394	  if (connect_ethernet == nullptr) {
+   395	    QUIC_DLOG(ERROR) << "Failed to create CONNECT-ETHERNET request";
+   396	    return;
+   397	  }
+   398	
+   399	  std::string http_payload;
+   400	  http_payload.resize(
+   401	      QuicDataWriter::GetVarInt62Len(kConnectEthernetPayloadContextId) +
+   402	      frame.size());
+   403	  QuicDataWriter writer(http_payload.size(), http_payload.data());
+   404	  if (!writer.WriteVarInt62(kConnectEthernetPayloadContextId)) {
+   405	    QUIC_BUG(IP context write fail)
+   406	        << "Failed to write CONNECT-ETHERNET context ID";
+   407	    return;
+   408	  }
+   409	  if (!writer.WriteStringPiece(frame)) {
+   410	    QUIC_BUG(IP packet write fail) << "Failed to write CONNECT-ETHERNET frame";
+   411	    return;
+   412	  }
+   413	  DatagramStatus message_status =
+   414	      SendHttp3Datagram(connect_ethernet->stream()->id(), http_payload);
+   415	
+   416	  QUIC_DVLOG(1) << "Sent encapsulated Ethernet frame of length " << frame.size()
+   417	                << " with stream ID " << connect_ethernet->stream()->id()
+   418	                << " and got message status "
+   419	                << DatagramStatusToString(message_status);
+   420	}
+   421	
+   422	void MasqueClientSession::SendConnectUdpBindPacket(
+   423	    absl::string_view packet, const QuicSocketAddress& target_server_address,
+   424	    EncapsulatedClientSession* encapsulated_client_session) {
+   425	  QUICHE_DCHECK(masque_mode_ == MasqueMode::kConnectUdpBind);
+   426	  ConnectUdpClientState* connect_udp = GetOrCreateConnectUdpClientState(
+   427	      QuicSocketAddress(), encapsulated_client_session);
+   428	  std::optional<std::string> bind_packet = connect_udp->PrepareBindPacket(
+   429	      packet, target_server_address, bind_use_uncompressed_context_);
+   430	  if (!bind_packet.has_value()) {
+   431	    QUIC_DLOG(ERROR) << "Failed to prepare bind packet";
+   432	    return;
+   433	  }
+   434	  QUIC_DVLOG(1) << "Sending bind packet: " << bind_packet.value()
+   435	                << " of length " << bind_packet.value().length() << " to "
+   436	                << target_server_address;
+   437	
+   438	  SendHttp3Datagram(connect_udp->stream()->id(), bind_packet.value());
+   439	}
+   440	
+   441	void MasqueClientSession::SendPacket(
+   442	    absl::string_view packet, const QuicSocketAddress& target_server_address,
+   443	    EncapsulatedClientSession* encapsulated_client_session) {
+   444	  const ConnectUdpClientState* connect_udp = GetOrCreateConnectUdpClientState(
+   445	      target_server_address, encapsulated_client_session);
+   446	  if (connect_udp == nullptr) {
+   447	    QUIC_DLOG(ERROR) << "Failed to create CONNECT-UDP request";
+   448	    return;
+   449	  }
+   450	  if (masque_mode_ == MasqueMode::kConnectUdpBind) {
+   451	    QUIC_LOG(ERROR) << "Should not be called in CONNECT-UDP Bind mode";
+   452	    return;
+   453	  }
+   454	
+   455	  std::string http_payload;
+   456	  http_payload.resize(1 + packet.size());
+   457	  http_payload[0] = 0;
+   458	  memcpy(&http_payload[1], packet.data(), packet.size());
+   459	  DatagramStatus message_status =
+   460	      SendHttp3Datagram(connect_udp->stream()->id(), http_payload);
+   461	
+   462	  QUIC_DVLOG(1) << "Sent packet to " << target_server_address
+   463	                << " compressed with stream ID " << connect_udp->stream()->id()
+   464	                << " and got message status "
+   465	                << DatagramStatusToString(message_status);
+   466	  QUIC_DVLOG(2) << "Contents of outgoing HTTP Datagram of length "
+   467	                << http_payload.size() << ":" << std::endl
+   468	                << quiche::QuicheTextUtils::HexDump(http_payload);
+   469	}
+   470	
+   471	// Send Capsule for CONNECT-UDP Bind.
+   472	void MasqueClientSession::SendBindCapsule(
+   473	    const quiche::Capsule& capsule,
+   474	    EncapsulatedClientSession* encapsulated_client_session) {
+   475	  for (auto& state : connect_udp_client_states_) {
+   476	    if (state.is_bind() &&
+   477	        state.encapsulated_client_session() == encapsulated_client_session) {
+   478	      state.stream()->WriteCapsule(capsule);
+   479	    }
+   480	  }
+   481	}
+   482	
+   483	void MasqueClientSession::CloseConnectUdpStream(
+   484	    EncapsulatedClientSession* encapsulated_client_session) {
+   485	  for (auto it = connect_udp_client_states_.begin();
+   486	       it != connect_udp_client_states_.end();) {
+   487	    if (it->encapsulated_client_session() == encapsulated_client_session) {
+   488	      QUIC_DLOG(INFO) << "Removing CONNECT-UDP state for stream ID "
+   489	                      << it->stream()->id();
+   490	      auto* stream = it->stream();
+   491	      it = connect_udp_client_states_.erase(it);
+   492	      if (!stream->write_side_closed()) {
+   493	        stream->Reset(QUIC_STREAM_CANCELLED);
+   494	      }
+   495	    } else {
+   496	      ++it;
+   497	    }
+   498	  }
+   499	}
+   500	
+   501	void MasqueClientSession::CloseConnectIpStream(
+   502	    EncapsulatedIpSession* encapsulated_ip_session) {
+   503	  for (auto it = connect_ip_client_states_.begin();
+   504	       it != connect_ip_client_states_.end();) {
+   505	    if (it->encapsulated_ip_session() == encapsulated_ip_session) {
+   506	      QUIC_DLOG(INFO) << "Removing CONNECT-IP state for stream ID "
+   507	                      << it->stream()->id();
+   508	      auto* stream = it->stream();
+   509	      it = connect_ip_client_states_.erase(it);
+   510	      if (!stream->write_side_closed()) {
+   511	        stream->Reset(QUIC_STREAM_CANCELLED);
+   512	      }
+   513	    } else {
+   514	      ++it;
+   515	    }
+   516	  }
+   517	}
+   518	
+   519	void MasqueClientSession::CloseConnectEthernetStream(
+   520	    EncapsulatedEthernetSession* encapsulated_ethernet_session) {
+   521	  for (auto it = connect_ethernet_client_states_.begin();
+   522	       it != connect_ethernet_client_states_.end();) {
+   523	    if (it->encapsulated_ethernet_session() == encapsulated_ethernet_session) {
+   524	      QUIC_DLOG(INFO) << "Removing CONNECT-ETHERNET state for stream ID "
+   525	                      << it->stream()->id();
+   526	      auto* stream = it->stream();
+   527	      it = connect_ethernet_client_states_.erase(it);
+   528	      if (!stream->write_side_closed()) {
+   529	        stream->Reset(QUIC_STREAM_CANCELLED);
+   530	      }
+   531	    } else {
+   532	      ++it;
+   533	    }
+   534	  }
+   535	}
+   536	
+   537	void MasqueClientSession::OnConnectionClosed(
+   538	    const QuicConnectionCloseFrame& frame, ConnectionCloseSource source) {
+   539	  QuicSpdyClientSession::OnConnectionClosed(frame, source);
+   540	  // Close all encapsulated sessions.
+   541	  for (const auto& client_state : connect_udp_client_states_) {
+   542	    client_state.encapsulated_client_session()->CloseConnection(
+   543	        QUIC_CONNECTION_CANCELLED, "Underlying MASQUE connection was closed",
+   544	        ConnectionCloseBehavior::SILENT_CLOSE);
+   545	  }
+   546	  for (const auto& client_state : connect_ip_client_states_) {
+   547	    client_state.encapsulated_ip_session()->CloseIpSession(
+   548	        "Underlying MASQUE connection was closed");
+   549	  }
+   550	}
+   551	
+   552	void MasqueClientSession::OnStreamClosed(QuicStreamId stream_id) {
+   553	  if (QuicUtils::IsBidirectionalStreamId(stream_id, version()) &&
+   554	      QuicUtils::IsClientInitiatedStreamId(transport_version(), stream_id)) {
+   555	    QuicSpdyClientStream* stream =
+   556	        reinterpret_cast<QuicSpdyClientStream*>(GetActiveStream(stream_id));
+   557	    if (stream != nullptr) {
+   558	      QUIC_DLOG(INFO) << "Stream " << stream_id
+   559	                      << " closed, got response headers:"
+   560	                      << stream->response_headers().DebugString();
+   561	    }
+   562	  }
+   563	  for (auto it = connect_udp_client_states_.begin();
+   564	       it != connect_udp_client_states_.end();) {
+   565	    if (it->stream()->id() == stream_id) {
+   566	      QUIC_DLOG(INFO) << "Stream " << stream_id
+   567	                      << " was closed, removing CONNECT-UDP state";
+   568	      auto* encapsulated_client_session = it->encapsulated_client_session();
+   569	      it = connect_udp_client_states_.erase(it);
+   570	      encapsulated_client_session->CloseConnection(
+   571	          QUIC_CONNECTION_CANCELLED,
+   572	          "Underlying MASQUE CONNECT-UDP stream was closed",
+   573	          ConnectionCloseBehavior::SILENT_CLOSE);
+   574	    } else {
+   575	      ++it;
+   576	    }
+   577	  }
+   578	  for (auto it = connect_ip_client_states_.begin();
+   579	       it != connect_ip_client_states_.end();) {
+   580	    if (it->stream()->id() == stream_id) {
+   581	      QUIC_DLOG(INFO) << "Stream " << stream_id
+   582	                      << " was closed, removing CONNECT-IP state";
+   583	      auto* encapsulated_ip_session = it->encapsulated_ip_session();
+   584	      it = connect_ip_client_states_.erase(it);
+   585	      encapsulated_ip_session->CloseIpSession(
+   586	          "Underlying MASQUE CONNECT-IP stream was closed");
+   587	    } else {
+   588	      ++it;
+   589	    }
+   590	  }
+   591	
+   592	  QuicSpdyClientSession::OnStreamClosed(stream_id);
+   593	}
+   594	
+   595	bool MasqueClientSession::OnSettingsFrame(const SettingsFrame& frame) {
+   596	  QUIC_DLOG(INFO) << connection_id() << " Received SETTINGS: " << frame;
+   597	  if (!QuicSpdyClientSession::OnSettingsFrame(frame)) {
+   598	    QUIC_DLOG(ERROR) << "Failed to parse received settings";
+   599	    return false;
+   600	  }
+   601	  if (!SupportsH3Datagram()) {
+   602	    QUIC_DLOG(ERROR) << "Warning: MasqueClientSession without HTTP/3 Datagrams";
+   603	  }
+   604	  QUIC_DLOG(INFO) << "Using HTTP Datagram: " << http_datagram_support();
+   605	  owner_->OnSettingsReceived();
+   606	  return true;
+   607	}
+   608	
+   609	MasqueClientSession::ConnectUdpClientState::ConnectUdpClientState(
+   610	    QuicSpdyClientStream* stream,
+   611	    EncapsulatedClientSession* encapsulated_client_session,
+   612	    MasqueClientSession* masque_session,
+   613	    const QuicSocketAddress& target_server_address)
+   614	    : stream_(stream),
+   615	      encapsulated_client_session_(encapsulated_client_session),
+   616	      masque_session_(masque_session),
+   617	      target_server_address_(target_server_address) {
+   618	  QUICHE_DCHECK_NE(masque_session_, nullptr);
+   619	  this->stream()->RegisterHttp3DatagramVisitor(this);
+   620	  if (masque_session->IsBind()) {
+   621	    this->stream()->RegisterConnectUdpBindVisitor(this);
+   622	  }
+   623	}
+   624	
+   625	MasqueClientSession::ConnectUdpClientState::~ConnectUdpClientState() {
+   626	  if (stream() != nullptr) {
+   627	    stream()->UnregisterHttp3DatagramVisitor();
+   628	    if (masque_session_->IsBind()) {
+   629	      this->stream()->UnregisterConnectUdpBindVisitor();
+   630	    }
+   631	  }
+   632	}
+   633	
+   634	MasqueClientSession::ConnectUdpClientState::ConnectUdpClientState(
+   635	    MasqueClientSession::ConnectUdpClientState&& other) {
+   636	  *this = std::move(other);
+   637	}
+   638	
+   639	MasqueClientSession::ConnectUdpClientState&
+   640	MasqueClientSession::ConnectUdpClientState::operator=(
+   641	    MasqueClientSession::ConnectUdpClientState&& other) {
+   642	  stream_ = other.stream_;
+   643	  encapsulated_client_session_ = other.encapsulated_client_session_;
+   644	  masque_session_ = other.masque_session_;
+   645	  target_server_address_ = other.target_server_address_;
+   646	  other.stream_ = nullptr;
+   647	  other.is_bind_ = is_bind_;
+   648	  other.bind_context_ip_map_ = std::move(bind_context_ip_map_);
+   649	  if (stream() != nullptr) {
+   650	    stream()->ReplaceHttp3DatagramVisitor(this);
+   651	    if (masque_session_->IsBind()) {
+   652	      stream()->ReplaceConnectUdpBindVisitor(this);
+   653	    }
+   654	  }
+   655	  return *this;
+   656	}
+   657	
+   658	void MasqueClientSession::ConnectUdpClientState::OnHttp3Datagram(
+   659	    QuicStreamId stream_id, absl::string_view payload) {
+   660	  QUIC_DVLOG(1) << "Received HTTP Datagram of length " << payload.size();
+   661	  QUICHE_DCHECK_EQ(stream_id, stream()->id());
+   662	  QuicDataReader reader(payload);
+   663	  if (!is_bind_) {
+   664	    ContextId context_id;
+   665	    if (!reader.ReadVarInt62(&context_id)) {
+   666	      QUIC_DLOG(ERROR) << "Failed to read context ID";
+   667	      return;
+   668	    }
+   669	    if (context_id != 0) {
+   670	      QUIC_DLOG(ERROR) << "Ignoring HTTP Datagram with unexpected context ID "
+   671	                       << context_id;
+   672	      return;
+   673	    }
+   674	  } else {
+   675	    ContextId context_id;
+   676	    QuicSocketAddress target_address;
+   677	    if (!reader.ReadVarInt62(&context_id)) {
+   678	      QUIC_DLOG(ERROR) << "Failed to read context ID";
+   679	      return;
+   680	    }
+   681	    if (!bind_context_ip_map_.contains(context_id)) {
+   682	      // Non existent context id.
+   683	      QUIC_DLOG(ERROR) << "Ignoring HTTP Datagram with non existent context id "
+   684	                       << context_id;
+   685	      // Drop the packet.
+   686	      return;
+   687	    }
+   688	    if (bind_context_ip_map_[context_id] == quiche::QuicheSocketAddress()) {
+   689	      // Uncompressed Context.
+   690	      // Parse IP and port.
+   691	      uint8_t ip_version;
+   692	      if (!reader.ReadUInt8(&ip_version)) {
+   693	        QUIC_DLOG(ERROR) << "Failed to read IP version";
+   694	        return;
+   695	      }
+   696	      auto address_size = ip_version == 4
+   697	                              ? quiche::QuicheIpAddress::kIPv4AddressSize
+   698	                              : quiche::QuicheIpAddress::kIPv6AddressSize;
+   699	      absl::string_view ip_address_bytes;
+   700	      if (!reader.ReadStringPiece(&ip_address_bytes, address_size)) {
+   701	        QUIC_DLOG(ERROR) << "Failed to read IP address";
+   702	        return;
+   703	      }
+   704	      quiche::QuicheIpAddress ip_address;
+   705	      if (!ip_address.FromPackedString(ip_address_bytes.data(), address_size)) {
+   706	        QUIC_DLOG(ERROR) << "Failed to parse IP address";
+   707	        return;
+   708	      }
+   709	      uint16_t port;
+   710	      if (!reader.ReadUInt16(&port)) {
+   711	        QUIC_DLOG(ERROR) << "Failed to read port";
+   712	        return;
+   713	      }
+   714	      target_address = QuicSocketAddress(ip_address, port);
+   715	    } else {
+   716	      target_address = bind_context_ip_map_[context_id];
+   717	    }
+   718	  }
+   719	
+   720	  absl::string_view http_payload = reader.ReadRemainingPayload();
+   721	  encapsulated_client_session_->ProcessPacket(http_payload,
+   722	                                              target_server_address_);
+   723	  QUIC_DVLOG(1) << "Sent " << http_payload.size()
+   724	                << " bytes to connection for stream ID " << stream_id;
+   725	}
+   726	
+   727	ContextId MasqueClientSession::ConnectUdpClientState::CreateCompressedContext(
+   728	    const QuicSocketAddress& target_address) {
+   729	  bind_context_ip_map_[next_available_context_id_] = target_address;
+   730	  quiche::Capsule capsule = quiche::Capsule::CompressionAssign();
+   731	  capsule.compression_assign_capsule().context_id = next_available_context_id_;
+   732	  capsule.compression_assign_capsule().ip_address_port = target_address;
+   733	
+   734	  masque_session_->SendBindCapsule(capsule, encapsulated_client_session_);
+   735	  // TODO(abhisinghx): Verify Acks Before using it
+   736	  return AllocateContextId();
+   737	}
+   738	
+   739	ContextId
+   740	MasqueClientSession::ConnectUdpClientState::CreateUncompressedContext() {
+   741	  bind_context_ip_map_[next_available_context_id_] =
+   742	      quiche::QuicheSocketAddress();
+   743	  quiche::Capsule capsule = quiche::Capsule::CompressionAssign();
+   744	  capsule.compression_assign_capsule().context_id = next_available_context_id_;
+   745	  capsule.compression_assign_capsule().ip_address_port =
+   746	      quiche::QuicheSocketAddress();
+   747	  QUIC_DLOG(INFO) << "Requesting open context " << next_available_context_id_;
+   748	  masque_session_->SendBindCapsule(capsule, encapsulated_client_session_);
+   749	  // TODO(abhisinghx): Verify capsule ack before using it.
+   750	  // It is fine to pre-emptively send UDP packets.
+   751	  return AllocateContextId();
+   752	}
+   753	
+   754	ContextId MasqueClientSession::ConnectUdpClientState::AllocateContextId() {
+   755	  next_available_context_id_ += 2;
+   756	  return next_available_context_id_ - 2;
+   757	}
+   758	
+   759	void MasqueClientSession::ConnectUdpClientState::CloseContext(
+   760	    ContextId context_id) {
+   761	  bind_context_ip_map_.erase(context_id);
+   762	  quiche::Capsule capsule = quiche::Capsule::CompressionClose();
+   763	  capsule.compression_close_capsule().context_id = context_id;
+   764	  QUIC_DLOG(INFO) << "Closing context " << context_id;
+   765	  masque_session_->SendBindCapsule(capsule, encapsulated_client_session_);
+   766	}
+   767	
+   768	bool MasqueClientSession::ConnectUdpClientState::OnCompressionAssignCapsule(
+   769	    const quiche::CompressionAssignCapsule& capsule) {
+   770	  if (!is_bind_) {
+   771	    QUIC_DLOG(ERROR) << "Received CompressionAssignCapsule "
+   772	                     << capsule.ToString() << " when bind is not set";
+   773	    return false;
+   774	  }
+   775	  QUIC_DLOG(INFO) << "CompressionAssignCapsule received: "
+   776	                  << capsule.ToString();
+   777	  if (!bind_context_ip_map_.contains(capsule.context_id)) {
+   778	    // Server is asking to create a new context.
+   779	    if (capsule.ip_address_port == quiche::QuicheSocketAddress()) {
+   780	      // Server is not allowed to create open context.
+   781	      QUIC_DLOG(ERROR) << "Server is not allowed to create open context";
+   782	      return false;
+   783	    } else {
+   784	      // Compressed context requested by server.
+   785	      if (capsule.context_id % 2 == 0) {
+   786	        // Even contexts are client-allocated.
+   787	        QUIC_DLOG(ERROR) << "Server is not allowed to create even contexts";
+   788	        return false;
+   789	      }
+   790	      bind_context_ip_map_[capsule.context_id] = capsule.ip_address_port;
+   791	      // Send acknowledgement.
+   792	
+   793	      quiche::Capsule to_send = quiche::Capsule::CompressionAssign();
+   794	      to_send.compression_assign_capsule() = capsule;
+   795	      masque_session_->SendBindCapsule(to_send, encapsulated_client_session_);
+   796	      return true;
+   797	    }
+   798	  } else if (bind_context_ip_map_[capsule.context_id] !=
+   799	             capsule.ip_address_port) {
+   800	    // Context already exists but the target address is different.
+   801	    QUIC_DLOG(ERROR) << "Context already exists with different target address "
+   802	                     << bind_context_ip_map_[capsule.context_id] << " and "
+   803	                     << capsule.ip_address_port;
+   804	    return false;
+   805	  } else {
+   806	    // This is an ack of client's request, ignore it.
+   807	    QUIC_DLOG(INFO) << "Ignoring ack of client's request";
+   808	    return true;
+   809	  }
+   810	}
+   811	
+   812	bool MasqueClientSession::ConnectUdpClientState::OnCompressionCloseCapsule(
+   813	    const quiche::CompressionCloseCapsule& capsule) {
+   814	  if (!is_bind_) {
+   815	    QUIC_DLOG(ERROR) << "Received CompressionCloseCapsule "
+   816	                     << capsule.ToString() << " when bind is not set";
+   817	    return false;
+   818	  }
+   819	  QUIC_DLOG(INFO) << "CompressionCloseCapsule received: " << capsule.ToString();
+   820	  // If we have this context id in the map, we can close it and send ack.
+   821	  if (bind_context_ip_map_.contains(capsule.context_id)) {
+   822	    CloseContext(capsule.context_id);
+   823	  }
+   824	  return true;
+   825	}
+   826	
+   827	std::optional<ContextId>
+   828	MasqueClientSession::ConnectUdpClientState::GetContextForAddress(
+   829	    const QuicSocketAddress& target_server_address) {
+   830	  std::optional<ContextId> uncompressed_context_id;
+   831	  for (const auto& [context_id, address] : bind_context_ip_map_) {
+   832	    if (address == target_server_address) {
+   833	      return context_id;
+   834	    }
+   835	    if (address == quiche::QuicheSocketAddress()) {
+   836	      uncompressed_context_id = context_id;
+   837	    }
+   838	  }
+   839	  return uncompressed_context_id;
+   840	}
+   841	
+   842	std::optional<std::string>
+   843	MasqueClientSession::ConnectUdpClientState::PrepareBindPacket(
+   844	    absl::string_view packet, const QuicSocketAddress& target_address,
+   845	    bool use_uncompressed_context) {
+   846	  std::string payload_out;
+   847	  // Find existing or open context for this address.
+   848	  std::optional<ContextId> context_id_opt =
+   849	      GetContextForAddress(target_address);
+   850	  ContextId context_id;
+   851	  if (!context_id_opt.has_value()) {
+   852	    // No context exists for this address, create a new compressed context.
+   853	    context_id = use_uncompressed_context
+   854	                     ? CreateUncompressedContext()
+   855	                     : CreateCompressedContext(target_address);
+   856	  } else {
+   857	    context_id = context_id_opt.value();
+   858	  }
+   859	  size_t total_size =
+   860	      quiche::QuicheDataWriter::GetVarInt62Len(context_id) + packet.size();
+   861	  if (bind_context_ip_map_[context_id] == target_address) {
+   862	    // No need to append target info, compress it.
+   863	    payload_out.resize(total_size);
+   864	    QuicDataWriter writer(total_size, payload_out.data());
+   865	    if (!writer.WriteVarInt62(context_id)) {
+   866	      QUIC_DLOG(ERROR) << "Failed to write compressed bind packet context id "
+   867	                       << context_id;
+   868	      return std::nullopt;
+   869	    }
+   870	    if (!writer.WriteStringPiece(packet)) {
+   871	      QUIC_DLOG(ERROR)
+   872	          << "Failed to write compressed bind packet payload for context id "
+   873	          << context_id;
+   874	      return std::nullopt;
+   875	    }
+   876	  } else {
+   877	    // Append target info.
+   878	    total_size += (sizeof(uint8_t)  // Ip version.
+   879	                   + target_address.host().ToPackedString().size()  // Ip addr.
+   880	                   + sizeof(uint16_t));                             // Port.
+   881	    payload_out.resize(total_size);
+   882	    QuicDataWriter writer(total_size, payload_out.data());
+   883	    if (!writer.WriteVarInt62(context_id) ||
+   884	        !writer.WriteUInt8(
+   885	            target_address.host().AddressFamilyToInt() == AF_INET ? 4 : 6) ||
+   886	        !writer.WriteStringPiece(target_address.host().ToPackedString()) ||
+   887	        !writer.WriteUInt16(target_address.port()) ||
+   888	        !writer.WriteStringPiece(packet)) {
+   889	      QUIC_DLOG(ERROR)
+   890	          << "Failed to write uncompressed bind packet for context id "
+   891	          << context_id;
+   892	      return std::nullopt;
+   893	    }
+   894	  }
+   895	  return payload_out;
+   896	}
+   897	
+   898	MasqueClientSession::ConnectIpClientState::ConnectIpClientState(
+   899	    QuicSpdyClientStream* stream,
+   900	    EncapsulatedIpSession* encapsulated_ip_session,
+   901	    MasqueClientSession* masque_session)
+   902	    : stream_(stream),
+   903	      encapsulated_ip_session_(encapsulated_ip_session),
+   904	      masque_session_(masque_session) {
+   905	  QUICHE_DCHECK_NE(masque_session_, nullptr);
+   906	  this->stream()->RegisterHttp3DatagramVisitor(this);
+   907	  this->stream()->RegisterConnectIpVisitor(this);
+   908	}
+   909	
+   910	MasqueClientSession::ConnectIpClientState::~ConnectIpClientState() {
+   911	  if (stream() != nullptr) {
+   912	    stream()->UnregisterHttp3DatagramVisitor();
+   913	    stream()->UnregisterConnectIpVisitor();
+   914	  }
+   915	}
+   916	
+   917	MasqueClientSession::ConnectIpClientState::ConnectIpClientState(
+   918	    MasqueClientSession::ConnectIpClientState&& other) {
+   919	  *this = std::move(other);
+   920	}
+   921	
+   922	MasqueClientSession::ConnectIpClientState&
+   923	MasqueClientSession::ConnectIpClientState::operator=(
+   924	    MasqueClientSession::ConnectIpClientState&& other) {
+   925	  stream_ = other.stream_;
+   926	  encapsulated_ip_session_ = other.encapsulated_ip_session_;
+   927	  masque_session_ = other.masque_session_;
+   928	  other.stream_ = nullptr;
+   929	  if (stream() != nullptr) {
+   930	    stream()->ReplaceHttp3DatagramVisitor(this);
+   931	    stream()->ReplaceConnectIpVisitor(this);
+   932	  }
+   933	  return *this;
+   934	}
+   935	
+   936	void MasqueClientSession::ConnectIpClientState::OnHttp3Datagram(
+   937	    QuicStreamId stream_id, absl::string_view payload) {
+   938	  QUICHE_DCHECK_EQ(stream_id, stream()->id());
+   939	  QuicDataReader reader(payload);
+   940	  ContextId context_id;
+   941	  if (!reader.ReadVarInt62(&context_id)) {
+   942	    QUIC_DLOG(ERROR) << "Failed to read context ID";
+   943	    return;
+   944	  }
+   945	  if (context_id != kConnectIpPayloadContextId) {
+   946	    QUIC_DLOG(ERROR) << "Ignoring HTTP Datagram with unexpected context ID "
+   947	                     << context_id;
+   948	    return;
+   949	  }
+   950	  absl::string_view http_payload = reader.ReadRemainingPayload();
+   951	  encapsulated_ip_session_->ProcessIpPacket(http_payload);
+   952	  QUIC_DVLOG(1) << "Sent " << http_payload.size()
+   953	                << " IP bytes to connection for stream ID " << stream_id;
+   954	}
+   955	
+   956	void MasqueClientSession::ConnectIpClientState::OnUnknownCapsule(
+   957	    QuicStreamId /*stream_id*/, const quiche::UnknownCapsule& capsule) {
+   958	  if (capsule.type == kDnsAssignCapsuleType) {
+   959	    DnsAssignCapsule dns_assign_capsule;
+   960	    if (ParseDnsAssignCapsulePayload(capsule.payload, &dns_assign_capsule)) {
+   961	      encapsulated_ip_session_->OnDnsAssignCapsule(dns_assign_capsule);
+   962	    } else {
+   963	      QUIC_LOG(ERROR) << "Failed to parse DNS_ASSIGN capsule";
+   964	    }
+   965	  } else if (capsule.type == kPref64CapsuleType) {
+   966	    Pref64Capsule pref64_capsule;
+   967	    if (ParsePref64CapsulePayload(capsule.payload, &pref64_capsule)) {
+   968	      encapsulated_ip_session_->OnPref64Capsule(pref64_capsule);
+   969	    } else {
+   970	      QUIC_LOG(ERROR) << "Failed to parse PREF64 capsule";
+   971	    }
+   972	  }
+   973	}
+   974	
+   975	bool MasqueClientSession::ConnectIpClientState::OnAddressAssignCapsule(
+   976	    const AddressAssignCapsule& capsule) {
+   977	  return encapsulated_ip_session_->OnAddressAssignCapsule(capsule);
+   978	}
+   979	
+   980	bool MasqueClientSession::ConnectIpClientState::OnAddressRequestCapsule(
+   981	    const AddressRequestCapsule& capsule) {
+   982	  return encapsulated_ip_session_->OnAddressRequestCapsule(capsule);
+   983	}
+   984	
+   985	bool MasqueClientSession::ConnectIpClientState::OnRouteAdvertisementCapsule(
+   986	    const RouteAdvertisementCapsule& capsule) {
+   987	  return encapsulated_ip_session_->OnRouteAdvertisementCapsule(capsule);
+   988	}
+   989	
+   990	void MasqueClientSession::ConnectIpClientState::OnHeadersWritten() {}
+   991	
+   992	// ConnectEthernetClientState
+   993	
+   994	MasqueClientSession::ConnectEthernetClientState::ConnectEthernetClientState(
+   995	    QuicSpdyClientStream* stream,
+   996	    EncapsulatedEthernetSession* encapsulated_ethernet_session,
+   997	    MasqueClientSession* masque_session)
+   998	    : stream_(stream),
+   999	      encapsulated_ethernet_session_(encapsulated_ethernet_session),
+  1000	      masque_session_(masque_session) {
+  1001	  QUICHE_DCHECK_NE(masque_session_, nullptr);
+  1002	  this->stream()->RegisterHttp3DatagramVisitor(this);
+  1003	}
+  1004	
+  1005	MasqueClientSession::ConnectEthernetClientState::~ConnectEthernetClientState() {
+  1006	  if (stream() != nullptr) {
+  1007	    stream()->UnregisterHttp3DatagramVisitor();
+  1008	  }
+  1009	}
+  1010	
+  1011	MasqueClientSession::ConnectEthernetClientState::ConnectEthernetClientState(
+  1012	    MasqueClientSession::ConnectEthernetClientState&& other) {
+  1013	  *this = std::move(other);
+  1014	}
+  1015	
+  1016	MasqueClientSession::ConnectEthernetClientState&
+  1017	MasqueClientSession::ConnectEthernetClientState::operator=(
+  1018	    MasqueClientSession::ConnectEthernetClientState&& other) {
+  1019	  stream_ = other.stream_;
+  1020	  encapsulated_ethernet_session_ = other.encapsulated_ethernet_session_;
+  1021	  masque_session_ = other.masque_session_;
+  1022	  other.stream_ = nullptr;
+  1023	  if (stream() != nullptr) {
+  1024	    stream()->ReplaceHttp3DatagramVisitor(this);
+  1025	  }
+  1026	  return *this;
+  1027	}
+  1028	
+  1029	void MasqueClientSession::ConnectEthernetClientState::OnHttp3Datagram(
+  1030	    QuicStreamId stream_id, absl::string_view payload) {
+  1031	  QUICHE_DCHECK_EQ(stream_id, stream()->id());
+  1032	  QuicDataReader reader(payload);
+  1033	  ContextId context_id;
+  1034	  if (!reader.ReadVarInt62(&context_id)) {
+  1035	    QUIC_DLOG(ERROR) << "Failed to read context ID";
+  1036	    return;
+  1037	  }
+  1038	  if (context_id != kConnectEthernetPayloadContextId) {
+  1039	    QUIC_DLOG(ERROR) << "Ignoring HTTP Datagram with unexpected context ID "
+  1040	                     << context_id;
+  1041	    return;
+  1042	  }
+  1043	  absl::string_view http_payload = reader.ReadRemainingPayload();
+  1044	  encapsulated_ethernet_session_->ProcessEthernetFrame(http_payload);
+  1045	  QUIC_DVLOG(1) << "Sent " << http_payload.size()
+  1046	                << " ETHERNET bytes to connection for stream ID " << stream_id;
+  1047	}
+  1048	
+  1049	// End ConnectEthernetClientState
+  1050	
+  1051	quiche::QuicheIpAddress MasqueClientSession::GetFakeAddress(
+  1052	    absl::string_view hostname) {
+  1053	  QUICHE_CHECK(!hostname.empty());
+  1054	  quiche::QuicheIpAddress address;
+  1055	  uint8_t address_bytes[16] = {0xFD};
+  1056	  quiche::QuicheRandom::GetInstance()->RandBytes(&address_bytes[1],
+  1057	                                                 sizeof(address_bytes) - 1);
+  1058	  address.FromPackedString(reinterpret_cast<const char*>(address_bytes),
+  1059	                           sizeof(address_bytes));
+  1060	  std::string address_bytes_string(reinterpret_cast<const char*>(address_bytes),
+  1061	                                   sizeof(address_bytes));
+  1062	  fake_addresses_[address_bytes_string] = std::string(hostname);
+  1063	  return address;
+  1064	}
+  1065	
+  1066	void MasqueClientSession::RemoveFakeAddress(
+  1067	    const quiche::QuicheIpAddress& fake_address) {
+  1068	  fake_addresses_.erase(fake_address.ToPackedString());
+  1069	}
+  1070	
+  1071	void MasqueClientSession::EnableConcealedAuth(absl::string_view key_id,
+  1072	                                              absl::string_view private_key,
+  1073	                                              absl::string_view public_key) {
+  1074	  QUICHE_CHECK(!key_id.empty());
+  1075	  QUICHE_CHECK_EQ(private_key.size(),
+  1076	                  static_cast<size_t>(ED25519_PRIVATE_KEY_LEN));
+  1077	  QUICHE_CHECK_EQ(public_key.size(),
+  1078	                  static_cast<size_t>(ED25519_PUBLIC_KEY_LEN));
+  1079	  concealed_auth_key_id_ = key_id;
+  1080	  concealed_auth_private_key_ = private_key;
+  1081	  concealed_auth_public_key_ = public_key;
+  1082	}
+  1083	
+  1084	QuicSpdyClientStream* MasqueClientSession::SendGetRequest(
+  1085	    absl::string_view path) {
+  1086	  QuicSpdyClientStream* stream = CreateOutgoingBidirectionalStream();
+  1087	  if (stream == nullptr) {
+  1088	    // Stream flow control limits prevented us from opening a new stream.
+  1089	    QUIC_DLOG(ERROR) << "Failed to open GET stream";
+  1090	    return nullptr;
+  1091	  }
+  1092	
+  1093	  QuicUrl url(uri_template_);
+  1094	  std::string scheme = url.scheme();
+  1095	  std::string authority = url.HostPort();
+  1096	
+  1097	  QUIC_DLOG(INFO) << "Sending GET request on stream " << stream->id()
+  1098	                  << " scheme=\"" << scheme << "\" authority=\"" << authority
+  1099	                  << "\" path=\"" << path << "\"";
+  1100	
+  1101	  // Send the request.
+  1102	  quiche::HttpHeaderBlock headers;
+  1103	  headers[":method"] = "GET";
+  1104	  headers[":scheme"] = scheme;
+  1105	  headers[":authority"] = authority;
+  1106	  headers[":path"] = path;
+  1107	  AddAdditionalHeaders(headers, url);
+  1108	  QUIC_DVLOG(1) << "Sending request headers: " << headers.DebugString();
+  1109	  // Setting the stream visitor is required to enable reading of the response
+  1110	  // body from the stream.
+  1111	  stream->set_visitor(this);
+  1112	  size_t bytes_sent =
+  1113	      stream->SendRequest(std::move(headers), /*body=*/"", /*fin=*/true);
+  1114	  if (bytes_sent == 0) {
+  1115	    QUIC_DLOG(ERROR) << "Failed to send GET request";
+  1116	    return nullptr;
+  1117	  }
+  1118	  return stream;
+  1119	}
+  1120	
+  1121	void MasqueClientSession::OnClose(QuicSpdyStream* stream) {
+  1122	  QUIC_DVLOG(1) << "Closing stream " << stream->id();
+  1123	}
+  1124	
+  1125	std::optional<std::string> MasqueClientSession::ComputeConcealedAuthHeader(
+  1126	    const QuicUrl& url) {
+  1127	  if (concealed_auth_private_key_.empty()) {
+  1128	    return std::nullopt;
+  1129	  }
+  1130	  std::string scheme = url.scheme();
+  1131	  std::string host = url.host();
+  1132	  uint16_t port = url.port();
+  1133	  std::string realm = "";
+  1134	  std::string key_exporter_output;
+  1135	  std::string key_exporter_context = ComputeConcealedAuthContext(
+  1136	      kEd25519SignatureScheme, concealed_auth_key_id_,
+  1137	      concealed_auth_public_key_, scheme, host, port, realm);
+  1138	  QUIC_DVLOG(1) << "key_exporter_context: "
+  1139	                << absl::WebSafeBase64Escape(key_exporter_context);
+  1140	  QUICHE_DCHECK(!key_exporter_context.empty());
+  1141	  if (!GetMutableCryptoStream()->ExportKeyingMaterial(
+  1142	          kConcealedAuthLabel, key_exporter_context, kConcealedAuthExporterSize,
+  1143	          &key_exporter_output)) {
+  1144	    QUIC_LOG(FATAL) << "Concealed auth TLS exporter failed";
+  1145	    return std::nullopt;
+  1146	  }
+  1147	  QUICHE_CHECK_EQ(key_exporter_output.size(), kConcealedAuthExporterSize);
+  1148	  std::string signature_input =
+  1149	      key_exporter_output.substr(0, kConcealedAuthSignatureInputSize);
+  1150	  QUIC_DVLOG(1) << "signature_input: "
+  1151	                << absl::WebSafeBase64Escape(signature_input);
+  1152	  std::string verification = key_exporter_output.substr(
+  1153	      kConcealedAuthSignatureInputSize, kConcealedAuthVerificationSize);
+  1154	  std::string data_covered_by_signature =
+  1155	      ConcealedAuthDataCoveredBySignature(signature_input);
+  1156	  QUIC_DVLOG(1) << "data_covered_by_signature: "
+  1157	                << absl::WebSafeBase64Escape(data_covered_by_signature);
+  1158	  uint8_t signature[ED25519_SIGNATURE_LEN];
+  1159	  if (ED25519_sign(
+  1160	          signature,
+  1161	          reinterpret_cast<const uint8_t*>(data_covered_by_signature.data()),
+  1162	          data_covered_by_signature.size(),
+  1163	          reinterpret_cast<const uint8_t*>(
+  1164	              concealed_auth_private_key_.data())) != 1) {
+  1165	    QUIC_LOG(FATAL) << "Concealed auth signature failed";
+  1166	    return std::nullopt;
+  1167	  }
+  1168	  return absl::StrCat(
+  1169	      "Concealed k=", absl::WebSafeBase64Escape(concealed_auth_key_id_),
+  1170	      ", a=", absl::WebSafeBase64Escape(concealed_auth_public_key_), ", p=",
+  1171	      absl::WebSafeBase64Escape(absl::string_view(
+  1172	          reinterpret_cast<const char*>(signature), sizeof(signature))),
+  1173	      ", s=", kEd25519SignatureScheme,
+  1174	      ", v=", absl::WebSafeBase64Escape(verification));
+  1175	}
+  1176	
+  1177	void MasqueClientSession::AddAdditionalHeaders(quiche::HttpHeaderBlock& headers,
+  1178	                                               const QuicUrl& url) {
+  1179	  std::optional<std::string> concealed_auth_header =
+  1180	      ComputeConcealedAuthHeader(url);
+  1181	  if (concealed_auth_header.has_value()) {
+  1182	    headers["authorization"] = *concealed_auth_header;
+  1183	  }
+  1184	  if (additional_headers_.empty()) {
+  1185	    return;
+  1186	  }
+  1187	  for (absl::string_view sp : absl::StrSplit(additional_headers_, ';')) {
+  1188	    quiche::QuicheTextUtils::RemoveLeadingAndTrailingWhitespace(&sp);
+  1189	    if (sp.empty()) {
+  1190	      continue;
+  1191	    }
+  1192	    std::vector<absl::string_view> kv =
+  1193	        absl::StrSplit(sp, absl::MaxSplits(':', 1));
+  1194	    quiche::QuicheTextUtils::RemoveLeadingAndTrailingWhitespace(&kv[0]);
+  1195	    quiche::QuicheTextUtils::RemoveLeadingAndTrailingWhitespace(&kv[1]);
+  1196	    headers[kv[0]] = kv[1];
+  1197	  }
+  1198	}
+  1199	
+  1200	}  // namespace quic

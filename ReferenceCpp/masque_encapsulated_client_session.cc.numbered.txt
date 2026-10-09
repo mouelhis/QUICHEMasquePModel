@@ -1,0 +1,283 @@
+     1	// Copyright 2019 The Chromium Authors. All rights reserved.
+     2	// Use of this source code is governed by a BSD-style license that can be
+     3	// found in the LICENSE file.
+     4	
+     5	#include "quiche/quic/masque/masque_encapsulated_client_session.h"
+     6	
+     7	#include <cstdint>
+     8	#include <string>
+     9	
+    10	#include "absl/strings/string_view.h"
+    11	#include "quiche/quic/core/crypto/quic_crypto_client_config.h"
+    12	#include "quiche/quic/core/frames/quic_connection_close_frame.h"
+    13	#include "quiche/quic/core/http/quic_spdy_client_session.h"
+    14	#include "quiche/quic/core/quic_config.h"
+    15	#include "quiche/quic/core/quic_connection.h"
+    16	#include "quiche/quic/core/quic_error_codes.h"
+    17	#include "quiche/quic/core/quic_packets.h"
+    18	#include "quiche/quic/core/quic_server_id.h"
+    19	#include "quiche/quic/core/quic_time.h"
+    20	#include "quiche/quic/core/quic_types.h"
+    21	#include "quiche/quic/core/quic_versions.h"
+    22	#include "quiche/quic/masque/masque_client_session.h"
+    23	#include "quiche/quic/platform/api/quic_logging.h"
+    24	#include "quiche/quic/platform/api/quic_socket_address.h"
+    25	#include "quiche/common/capsule.h"
+    26	#include "quiche/common/platform/api/quiche_logging.h"
+    27	#include "quiche/common/quiche_data_reader.h"
+    28	#include "quiche/common/quiche_ip_address.h"
+    29	#include "quiche/common/quiche_text_utils.h"
+    30	
+    31	namespace quic {
+    32	
+    33	using ::quiche::AddressAssignCapsule;
+    34	using ::quiche::AddressRequestCapsule;
+    35	using ::quiche::RouteAdvertisementCapsule;
+    36	
+    37	MasqueEncapsulatedClientSession::MasqueEncapsulatedClientSession(
+    38	    const QuicConfig& config, const ParsedQuicVersionVector& supported_versions,
+    39	    QuicConnection* connection, const QuicServerId& server_id,
+    40	    QuicCryptoClientConfig* crypto_config,
+    41	    MasqueClientSession* masque_client_session,
+    42	    MasqueClientSession::Owner* owner)
+    43	    : MasqueClientSession(config, supported_versions, connection, server_id,
+    44	                          crypto_config, owner),
+    45	      masque_client_session_(masque_client_session) {}
+    46	
+    47	MasqueEncapsulatedClientSession::MasqueEncapsulatedClientSession(
+    48	    MasqueMode masque_mode, const std::string& uri_template,
+    49	    const QuicConfig& config, const ParsedQuicVersionVector& supported_versions,
+    50	    QuicConnection* connection, const QuicServerId& server_id,
+    51	    QuicCryptoClientConfig* crypto_config,
+    52	    MasqueClientSession* masque_client_session,
+    53	    MasqueClientSession::Owner* owner)
+    54	    : MasqueClientSession(masque_mode, uri_template, config, supported_versions,
+    55	                          connection, server_id, crypto_config, owner),
+    56	      masque_client_session_(masque_client_session) {}
+    57	
+    58	void MasqueEncapsulatedClientSession::ProcessPacket(
+    59	    absl::string_view packet, QuicSocketAddress server_address) {
+    60	  QuicTime now = connection()->clock()->ApproximateNow();
+    61	  QuicReceivedPacket received_packet(packet.data(), packet.length(), now);
+    62	  connection()->ProcessUdpPacket(connection()->self_address(), server_address,
+    63	                                 received_packet);
+    64	}
+    65	
+    66	void MasqueEncapsulatedClientSession::CloseConnection(
+    67	    QuicErrorCode error, const std::string& details,
+    68	    ConnectionCloseBehavior connection_close_behavior) {
+    69	  connection()->CloseConnection(error, details, connection_close_behavior);
+    70	}
+    71	
+    72	void MasqueEncapsulatedClientSession::OnConnectionClosed(
+    73	    const QuicConnectionCloseFrame& frame, ConnectionCloseSource source) {
+    74	  MasqueClientSession::OnConnectionClosed(frame, source);
+    75	  masque_client_session_->CloseConnectUdpStream(this);
+    76	}
+    77	
+    78	void MasqueEncapsulatedClientSession::ProcessIpPacket(
+    79	    absl::string_view packet) {
+    80	  quiche::QuicheDataReader reader(packet);
+    81	  uint8_t first_byte;
+    82	  if (!reader.ReadUInt8(&first_byte)) {
+    83	    QUIC_DLOG(ERROR) << "Dropping empty CONNECT-IP packet";
+    84	    return;
+    85	  }
+    86	  const uint8_t ip_version = first_byte >> 4;
+    87	  quiche::QuicheIpAddress server_ip;
+    88	  if (ip_version == 6) {
+    89	    if (!reader.Seek(5)) {
+    90	      QUICHE_DLOG(ERROR) << "Failed to seek CONNECT-IP IPv6 start\n"
+    91	                         << quiche::QuicheTextUtils::HexDump(packet);
+    92	      return;
+    93	    }
+    94	    uint8_t next_header = 0;
+    95	    if (!reader.ReadUInt8(&next_header)) {
+    96	      QUICHE_DLOG(ERROR) << "Failed to read CONNECT-IP next header\n"
+    97	                         << quiche::QuicheTextUtils::HexDump(packet);
+    98	      return;
+    99	    }
+   100	    if (next_header != 17) {
+   101	      // Note that this drops packets with IPv6 extension headers, since we
+   102	      // do not expect to see them in practice.
+   103	      QUIC_DLOG(ERROR)
+   104	          << "Dropping CONNECT-IP packet with unexpected next header "
+   105	          << static_cast<int>(next_header) << "\n"
+   106	          << quiche::QuicheTextUtils::HexDump(packet);
+   107	      return;
+   108	    }
+   109	    if (!reader.Seek(1)) {
+   110	      QUICHE_DLOG(ERROR) << "Failed to seek CONNECT-IP hop limit\n"
+   111	                         << quiche::QuicheTextUtils::HexDump(packet);
+   112	      return;
+   113	    }
+   114	    absl::string_view source_ip;
+   115	    if (!reader.ReadStringPiece(&source_ip, 16)) {
+   116	      QUICHE_DLOG(ERROR) << "Failed to read CONNECT-IP source IPv6\n"
+   117	                         << quiche::QuicheTextUtils::HexDump(packet);
+   118	      return;
+   119	    }
+   120	    server_ip.FromPackedString(source_ip.data(), source_ip.length());
+   121	    if (!reader.Seek(16)) {
+   122	      QUICHE_DLOG(ERROR) << "Failed to seek CONNECT-IP destination IPv6\n"
+   123	                         << quiche::QuicheTextUtils::HexDump(packet);
+   124	      return;
+   125	    }
+   126	  } else if (ip_version == 4) {
+   127	    uint8_t ihl = first_byte & 0xF;
+   128	    if (ihl < 5) {
+   129	      QUICHE_DLOG(ERROR) << "Dropping CONNECT-IP packet with invalid IHL "
+   130	                         << static_cast<int>(ihl) << "\n"
+   131	                         << quiche::QuicheTextUtils::HexDump(packet);
+   132	      return;
+   133	    }
+   134	    if (!reader.Seek(8)) {
+   135	      QUICHE_DLOG(ERROR) << "Failed to seek CONNECT-IP IPv4 start\n"
+   136	                         << quiche::QuicheTextUtils::HexDump(packet);
+   137	      return;
+   138	    }
+   139	    uint8_t ip_proto = 0;
+   140	    if (!reader.ReadUInt8(&ip_proto)) {
+   141	      QUICHE_DLOG(ERROR) << "Failed to read CONNECT-IP ip_proto\n"
+   142	                         << quiche::QuicheTextUtils::HexDump(packet);
+   143	      return;
+   144	    }
+   145	    if (ip_proto != 17) {
+   146	      QUIC_DLOG(ERROR) << "Dropping CONNECT-IP packet with unexpected IP proto "
+   147	                       << static_cast<int>(ip_proto) << "\n"
+   148	                       << quiche::QuicheTextUtils::HexDump(packet);
+   149	      return;
+   150	    }
+   151	    if (!reader.Seek(2)) {
+   152	      QUICHE_DLOG(ERROR) << "Failed to seek CONNECT-IP IP checksum\n"
+   153	                         << quiche::QuicheTextUtils::HexDump(packet);
+   154	      return;
+   155	    }
+   156	    absl::string_view source_ip;
+   157	    if (!reader.ReadStringPiece(&source_ip, 4)) {
+   158	      QUICHE_DLOG(ERROR) << "Failed to read CONNECT-IP source IPv4\n"
+   159	                         << quiche::QuicheTextUtils::HexDump(packet);
+   160	      return;
+   161	    }
+   162	    server_ip.FromPackedString(source_ip.data(), source_ip.length());
+   163	    if (!reader.Seek(4)) {
+   164	      QUICHE_DLOG(ERROR) << "Failed to seek CONNECT-IP destination IPv4\n"
+   165	                         << quiche::QuicheTextUtils::HexDump(packet);
+   166	      return;
+   167	    }
+   168	    uint8_t ip_options_length = (ihl - 5) * 4;
+   169	    if (!reader.Seek(ip_options_length)) {
+   170	      QUICHE_DLOG(ERROR) << "Failed to seek CONNECT-IP IP options of length "
+   171	                         << static_cast<int>(ip_options_length) << "\n"
+   172	                         << quiche::QuicheTextUtils::HexDump(packet);
+   173	      return;
+   174	    }
+   175	  } else {
+   176	    QUIC_DLOG(ERROR) << "Dropping CONNECT-IP packet with unexpected IP version "
+   177	                     << static_cast<int>(ip_version) << "\n"
+   178	                     << quiche::QuicheTextUtils::HexDump(packet);
+   179	    return;
+   180	  }
+   181	  // Parse UDP header.
+   182	  uint16_t server_port;
+   183	  if (!reader.ReadUInt16(&server_port)) {
+   184	    QUICHE_DLOG(ERROR) << "Failed to read CONNECT-IP source port\n"
+   185	                       << quiche::QuicheTextUtils::HexDump(packet);
+   186	    return;
+   187	  }
+   188	  if (!reader.Seek(2)) {
+   189	    QUICHE_DLOG(ERROR) << "Failed to seek CONNECT-IP destination port\n"
+   190	                       << quiche::QuicheTextUtils::HexDump(packet);
+   191	    return;
+   192	  }
+   193	  uint16_t udp_length;
+   194	  if (!reader.ReadUInt16(&udp_length)) {
+   195	    QUICHE_DLOG(ERROR) << "Failed to read CONNECT-IP UDP length\n"
+   196	                       << quiche::QuicheTextUtils::HexDump(packet);
+   197	    return;
+   198	  }
+   199	  if (udp_length < 8) {
+   200	    QUICHE_DLOG(ERROR) << "Dropping CONNECT-IP packet with invalid UDP length "
+   201	                       << udp_length << "\n"
+   202	                       << quiche::QuicheTextUtils::HexDump(packet);
+   203	    return;
+   204	  }
+   205	  if (!reader.Seek(2)) {
+   206	    QUICHE_DLOG(ERROR) << "Failed to seek CONNECT-IP UDP checksum\n"
+   207	                       << quiche::QuicheTextUtils::HexDump(packet);
+   208	    return;
+   209	  }
+   210	  absl::string_view quic_packet;
+   211	  if (!reader.ReadStringPiece(&quic_packet, udp_length - 8)) {
+   212	    QUICHE_DLOG(ERROR) << "Failed to read CONNECT-IP UDP payload\n"
+   213	                       << quiche::QuicheTextUtils::HexDump(packet);
+   214	    return;
+   215	  }
+   216	  if (!reader.IsDoneReading()) {
+   217	    QUICHE_DLOG(INFO) << "Received CONNECT-IP UDP packet with "
+   218	                      << reader.BytesRemaining()
+   219	                      << " extra bytes after payload\n"
+   220	                      << quiche::QuicheTextUtils::HexDump(packet);
+   221	  }
+   222	  QUIC_DLOG(INFO) << "Received CONNECT-IP encapsulated packet of length "
+   223	                  << quic_packet.size();
+   224	  QuicTime now = connection()->clock()->ApproximateNow();
+   225	  QuicReceivedPacket received_packet(quic_packet.data(), quic_packet.size(),
+   226	                                     now);
+   227	  QuicSocketAddress server_address = QuicSocketAddress(server_ip, server_port);
+   228	  connection()->ProcessUdpPacket(connection()->self_address(), server_address,
+   229	                                 received_packet);
+   230	}
+   231	
+   232	void MasqueEncapsulatedClientSession::CloseIpSession(
+   233	    const std::string& details) {
+   234	  connection()->CloseConnection(QUIC_CONNECTION_CANCELLED, details,
+   235	                                ConnectionCloseBehavior::SILENT_CLOSE);
+   236	}
+   237	
+   238	bool MasqueEncapsulatedClientSession::OnAddressAssignCapsule(
+   239	    const AddressAssignCapsule& capsule) {
+   240	  QUIC_DLOG(INFO) << "Received capsule " << capsule.ToString();
+   241	  for (auto assigned_address : capsule.assigned_addresses) {
+   242	    if (assigned_address.ip_prefix.address().IsIPv4() &&
+   243	        !local_v4_address_.IsInitialized()) {
+   244	      QUIC_LOG(INFO)
+   245	          << "MasqueEncapsulatedClientSession saving local IPv4 address "
+   246	          << assigned_address.ip_prefix.address();
+   247	      local_v4_address_ = assigned_address.ip_prefix.address();
+   248	    } else if (assigned_address.ip_prefix.address().IsIPv6() &&
+   249	               !local_v6_address_.IsInitialized()) {
+   250	      QUIC_LOG(INFO)
+   251	          << "MasqueEncapsulatedClientSession saving local IPv6 address "
+   252	          << assigned_address.ip_prefix.address();
+   253	      local_v6_address_ = assigned_address.ip_prefix.address();
+   254	    }
+   255	  }
+   256	  return true;
+   257	}
+   258	
+   259	bool MasqueEncapsulatedClientSession::OnAddressRequestCapsule(
+   260	    const AddressRequestCapsule& capsule) {
+   261	  QUIC_DLOG(INFO) << "Ignoring received capsule " << capsule.ToString();
+   262	  return true;
+   263	}
+   264	
+   265	bool MasqueEncapsulatedClientSession::OnRouteAdvertisementCapsule(
+   266	    const RouteAdvertisementCapsule& capsule) {
+   267	  QUIC_DLOG(INFO) << "Ignoring received capsule " << capsule.ToString();
+   268	  return true;
+   269	}
+   270	
+   271	bool MasqueEncapsulatedClientSession::OnDnsAssignCapsule(
+   272	    const DnsAssignCapsule& capsule) {
+   273	  QUIC_LOG(INFO) << "Received capsule " << capsule.ToString();
+   274	  return true;
+   275	}
+   276	
+   277	bool MasqueEncapsulatedClientSession::OnPref64Capsule(
+   278	    const Pref64Capsule& capsule) {
+   279	  QUIC_LOG(INFO) << "Received capsule " << capsule.ToString();
+   280	  return true;
+   281	}
+   282	
+   283	}  // namespace quic

@@ -1,0 +1,102 @@
+Total event coverage: 80.0%
+===========================
+StateMachine: FdReuseAfterCloseDriver
+=====================================
+Event coverage: 100.0%
+
+	State: Init
+		State has no expected events, so coverage is 100%
+
+StateMachine: Http3Transport
+============================
+Event coverage: 60.0%
+
+	State: Init
+		State event coverage: 100.0%
+		Events received: eConfigureTransport
+		Events sent: eTransportReady
+		Next states: Active
+
+	State: Active
+		State event coverage: 55.6%
+		Events received: teClientDatagram, teConnectRequest, teConnectResponse, teResetStream, teServerDatagram
+		Events sent: ceConnectResponse, ceHttpDatagram, ceStreamClosed, seConnectRequest, seHttpDatagram, seStreamClosed
+		Events not covered: teBindContextAssign, teCloseConnection, teFlushPendingBindContexts, teFlushPendingConnects
+		Previous states: Init
+
+StateMachine: MasqueClientSession
+=================================
+Event coverage: 83.3%
+
+	State: Init
+		State has no expected events, so coverage is 100%
+		Next states: Active
+
+	State: Active
+		State event coverage: 83.3%
+		Events received: ceCloseEncapsulatedSession, ceConnectResponse, ceHttpDatagram, ceSendPacket, ceStreamClosed
+		Events sent: teClientDatagram, teConnectRequest, teResetStream
+		Events not covered: ceConnectionClosed
+		Previous states: Init
+
+StateMachine: MasqueServerSession
+=================================
+Event coverage: 66.7%
+
+	State: Init
+		State has no expected events, so coverage is 100%
+		Next states: Active
+
+	State: Active
+		State event coverage: 66.7%
+		Events received: seConnectRequest, seHttpDatagram, seStreamClosed, seUdpReadable
+		Events sent: teConnectResponse, teServerDatagram, ueProxyWrite
+		Events not covered: seBindContextAssign, seConnectionClosed
+		Previous states: Init
+
+StateMachine: MasqueTestDriver
+==============================
+Event coverage: 100.0%
+
+	State: Init
+		State has no expected events, so coverage is 100%
+		Events sent: eConfigureTransport, eConfigureUdp
+		Next states: WaitingForEnvironment
+
+	State: WaitingForEnvironment
+		State event coverage: 100.0%
+		Events received: eTransportReady, eUdpReady
+		Previous states: Init
+		Next states: Running
+
+	State: Running
+		State has no expected events, so coverage is 100%
+		Events sent: ceCloseEncapsulatedSession, ceSendPacket
+		Previous states: WaitingForEnvironment
+
+Monitor: TunnelIsolation
+========================
+Event coverage: 100.0%
+
+	State: Check
+		State event coverage: 100.0%
+		Events received: meClientPacketDelivered, meClientTunnelCreated, meClientTunnelRemoved, meProxyDatagramAcceptedForClient, meProxyDatagramForwardedToTarget, meServerTunnelCreated, meServerTunnelRemoved, meUdpReplyGenerated, meUnexpectedUdpDropped
+		Previous states: Check
+		Next states: Check
+
+StateMachine: UdpEnvironment
+============================
+Event coverage: 100.0%
+
+	State: Init
+		State event coverage: 100.0%
+		Events received: eConfigureUdp
+		Events sent: eUdpReady
+		Next states: Active
+
+	State: Active
+		State event coverage: 100.0%
+		Events received: ueProxyWrite
+		Events sent: seUdpReadable
+		Previous states: Init
+

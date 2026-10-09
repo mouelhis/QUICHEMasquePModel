@@ -1,0 +1,93 @@
+Total event coverage: 22.2%
+===========================
+StateMachine: BindCreateFailureDriver
+=====================================
+Event coverage: 100.0%
+
+	State: Init
+		State has no expected events, so coverage is 100%
+
+Monitor: BindStateCreationSafety
+================================
+Event coverage: 100.0%
+
+	State: Safe
+		State event coverage: 100.0%
+		Events received: meBindPrepareOnNullState
+		Previous states: Safe
+		Next states: Safe
+
+StateMachine: Http3Transport
+============================
+Event coverage: 10.0%
+
+	State: Init
+		State event coverage: 100.0%
+		Events received: eConfigureTransport
+		Events sent: eTransportReady
+		Next states: Active
+
+	State: Active is uncovered
+		Events not covered: teBindContextAssign, teClientDatagram, teCloseConnection, teConnectRequest, teConnectResponse, teFlushPendingBindContexts, teFlushPendingConnects, teResetStream, teServerDatagram
+		Previous states: Init
+
+StateMachine: MasqueClientSession
+=================================
+Event coverage: 16.7%
+
+	State: Init
+		State has no expected events, so coverage is 100%
+		Next states: Active
+
+	State: Active
+		State event coverage: 16.7%
+		Events received: ceSendPacket
+		Events not covered: ceCloseEncapsulatedSession, ceConnectResponse, ceConnectionClosed, ceHttpDatagram, ceStreamClosed
+		Previous states: Init
+
+StateMachine: MasqueServerSession
+=================================
+Event coverage: 0.0%
+
+	State: Init
+		State has no expected events, so coverage is 100%
+		Next states: Active
+
+	State: Active is uncovered
+		Events not covered: seBindContextAssign, seConnectRequest, seConnectionClosed, seHttpDatagram, seStreamClosed, seUdpReadable
+		Previous states: Init
+
+StateMachine: MasqueTestDriver
+==============================
+Event coverage: 100.0%
+
+	State: Init
+		State has no expected events, so coverage is 100%
+		Events sent: eConfigureTransport, eConfigureUdp
+		Next states: WaitingForEnvironment
+
+	State: WaitingForEnvironment
+		State event coverage: 100.0%
+		Events received: eTransportReady, eUdpReady
+		Previous states: Init
+		Next states: Running
+
+	State: Running
+		State has no expected events, so coverage is 100%
+		Events sent: ceSendPacket
+		Previous states: WaitingForEnvironment
+
+StateMachine: UdpEnvironment
+============================
+Event coverage: 50.0%
+
+	State: Init
+		State event coverage: 100.0%
+		Events received: eConfigureUdp
+		Events sent: eUdpReady
+		Next states: Active
+
+	State: Active is uncovered
+		Events not covered: ueProxyWrite
+		Previous states: Init
+

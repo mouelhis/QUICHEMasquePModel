@@ -1,0 +1,2416 @@
+[
+  {
+    "type": "CreateMonitor",
+    "details": {
+      "log": "TunnelIsolation was created.",
+      "payload": "null",
+      "monitor": "TunnelIsolation",
+      "clock": {
+        "TunnelIsolation": 1
+      }
+    }
+  },
+  {
+    "type": "MonitorStateTransition",
+    "details": {
+      "log": "TunnelIsolation enters state \u0027Check\u0027.",
+      "state": "Check",
+      "payload": "null",
+      "isEntry": true,
+      "monitor": "TunnelIsolation",
+      "clock": {
+        "TunnelIsolation": 2
+      }
+    }
+  },
+  {
+    "type": "CreateStateMachine",
+    "details": {
+      "log": "FdReuseAfterCloseDriver(1) was created by task \u0027197\u0027.",
+      "id": "FdReuseAfterCloseDriver(1)",
+      "payload": "null",
+      "clock": {
+        "FdReuseAfterCloseDriver(1)": 1
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "FdReuseAfterCloseDriver(1) enters state \u0027Init\u0027.",
+      "id": "FdReuseAfterCloseDriver(1)",
+      "state": "Init",
+      "payload": "null",
+      "isEntry": true,
+      "clock": {
+        "FdReuseAfterCloseDriver(1)": 2
+      }
+    }
+  },
+  {
+    "type": "CreateStateMachine",
+    "details": {
+      "log": "MasqueTestDriver(2) was created by FdReuseAfterCloseDriver(1).",
+      "id": "MasqueTestDriver(2)",
+      "creatorName": "FdReuseAfterCloseDriver(1)",
+      "creatorType": "FdReuseAfterCloseDriver",
+      "payload": "null",
+      "clock": {
+        "MasqueTestDriver(2)": 1
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "MasqueTestDriver(2) enters state \u0027Init\u0027.",
+      "id": "MasqueTestDriver(2)",
+      "state": "Init",
+      "payload": "null",
+      "isEntry": true,
+      "clock": {
+        "MasqueTestDriver(2)": 2
+      }
+    }
+  },
+  {
+    "type": "CreateStateMachine",
+    "details": {
+      "log": "Http3Transport(3) was created by MasqueTestDriver(2).",
+      "id": "Http3Transport(3)",
+      "creatorName": "MasqueTestDriver(2)",
+      "creatorType": "MasqueTestDriver",
+      "payload": "null",
+      "clock": {
+        "Http3Transport(3)": 1
+      }
+    }
+  },
+  {
+    "type": "CreateStateMachine",
+    "details": {
+      "log": "UdpEnvironment(4) was created by MasqueTestDriver(2).",
+      "id": "UdpEnvironment(4)",
+      "creatorName": "MasqueTestDriver(2)",
+      "creatorType": "MasqueTestDriver",
+      "payload": "null",
+      "clock": {
+        "UdpEnvironment(4)": 1
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "UdpEnvironment(4) enters state \u0027Init\u0027.",
+      "id": "UdpEnvironment(4)",
+      "state": "Init",
+      "payload": "null",
+      "isEntry": true,
+      "clock": {
+        "UdpEnvironment(4)": 2
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "Http3Transport(3) enters state \u0027Init\u0027.",
+      "id": "Http3Transport(3)",
+      "state": "Init",
+      "payload": "null",
+      "isEntry": true,
+      "clock": {
+        "Http3Transport(3)": 2
+      }
+    }
+  },
+  {
+    "type": "CreateStateMachine",
+    "details": {
+      "log": "MasqueServerSession(5) was created by MasqueTestDriver(2).",
+      "id": "MasqueServerSession(5)",
+      "creatorName": "MasqueTestDriver(2)",
+      "creatorType": "MasqueTestDriver",
+      "payload": "null",
+      "clock": {
+        "MasqueServerSession(5)": 1
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "MasqueServerSession(5) enters state \u0027Init\u0027.",
+      "id": "MasqueServerSession(5)",
+      "state": "Init",
+      "payload": "null",
+      "isEntry": true,
+      "clock": {
+        "MasqueServerSession(5)": 2
+      }
+    }
+  },
+  {
+    "type": "GotoState",
+    "details": {
+      "log": "MasqueServerSession(5) is transitioning from state \u0027Init\u0027 to state \u0027Active\u0027.",
+      "id": "MasqueServerSession(5)",
+      "startState": "Init",
+      "endState": "Active",
+      "payload": "null",
+      "clock": {
+        "MasqueServerSession(5)": 3
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "MasqueServerSession(5) exits state \u0027Init\u0027.",
+      "id": "MasqueServerSession(5)",
+      "state": "Init",
+      "payload": "null",
+      "isEntry": false,
+      "clock": {
+        "MasqueServerSession(5)": 4
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "MasqueServerSession(5) enters state \u0027Active\u0027.",
+      "id": "MasqueServerSession(5)",
+      "state": "Active",
+      "payload": "null",
+      "isEntry": true,
+      "clock": {
+        "MasqueServerSession(5)": 5
+      }
+    }
+  },
+  {
+    "type": "CreateStateMachine",
+    "details": {
+      "log": "MasqueClientSession(6) was created by MasqueTestDriver(2).",
+      "id": "MasqueClientSession(6)",
+      "creatorName": "MasqueTestDriver(2)",
+      "creatorType": "MasqueTestDriver",
+      "payload": "null",
+      "clock": {
+        "MasqueClientSession(6)": 1
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "MasqueClientSession(6) enters state \u0027Init\u0027.",
+      "id": "MasqueClientSession(6)",
+      "state": "Init",
+      "payload": "null",
+      "isEntry": true,
+      "clock": {
+        "MasqueClientSession(6)": 2
+      }
+    }
+  },
+  {
+    "type": "GotoState",
+    "details": {
+      "log": "MasqueClientSession(6) is transitioning from state \u0027Init\u0027 to state \u0027Active\u0027.",
+      "id": "MasqueClientSession(6)",
+      "startState": "Init",
+      "endState": "Active",
+      "payload": "null",
+      "clock": {
+        "MasqueClientSession(6)": 3
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "MasqueClientSession(6) exits state \u0027Init\u0027.",
+      "id": "MasqueClientSession(6)",
+      "state": "Init",
+      "payload": "null",
+      "isEntry": false,
+      "clock": {
+        "MasqueClientSession(6)": 4
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "MasqueClientSession(6) enters state \u0027Active\u0027.",
+      "id": "MasqueClientSession(6)",
+      "state": "Active",
+      "payload": "null",
+      "isEntry": true,
+      "clock": {
+        "MasqueClientSession(6)": 5
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027MasqueTestDriver(2)\u0027 in state \u0027Init\u0027 sent event \u0027eConfigureTransport with payload (\u003Cclient:MasqueClientSession(6), server:MasqueServerSession(5), driver:MasqueTestDriver(2), config:\u003CudpMode:0, nondetLocalFailures:False, allowDatagramLoss:False, allowDatagramBeforeRequest:False, allowBindContextDatagramReordering:False, bindUseUncompressedContext:False, closeAfterFirstClientDatagram:False, closeConnectionAfterConnectResponse:False, allowFdReuse:True, udpReplyMode:1, \u003E, \u003E)\u0027 to \u0027Http3Transport(3)\u0027.",
+      "event": "eConfigureTransport",
+      "state": "Init",
+      "payload": {
+        "client": "MasqueClientSession(6)",
+        "server": "MasqueServerSession(5)",
+        "driver": "MasqueTestDriver(2)",
+        "config": {
+          "udpMode": 0,
+          "nondetLocalFailures": false,
+          "allowDatagramLoss": false,
+          "allowDatagramBeforeRequest": false,
+          "allowBindContextDatagramReordering": false,
+          "bindUseUncompressedContext": false,
+          "closeAfterFirstClientDatagram": false,
+          "closeConnectionAfterConnectResponse": false,
+          "allowFdReuse": true,
+          "udpReplyMode": 1
+        }
+      },
+      "sender": "MasqueTestDriver(2)",
+      "target": "Http3Transport(3)",
+      "isTargetHalted": false,
+      "clock": {
+        "MasqueTestDriver(2)": 3
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027MasqueTestDriver(2)\u0027 in state \u0027Init\u0027 sent event \u0027eConfigureUdp with payload (\u003Cserver:MasqueServerSession(5), driver:MasqueTestDriver(2), config:\u003CudpMode:0, nondetLocalFailures:False, allowDatagramLoss:False, allowDatagramBeforeRequest:False, allowBindContextDatagramReordering:False, bindUseUncompressedContext:False, closeAfterFirstClientDatagram:False, closeConnectionAfterConnectResponse:False, allowFdReuse:True, udpReplyMode:1, \u003E, \u003E)\u0027 to \u0027UdpEnvironment(4)\u0027.",
+      "event": "eConfigureUdp",
+      "state": "Init",
+      "payload": {
+        "server": "MasqueServerSession(5)",
+        "driver": "MasqueTestDriver(2)",
+        "config": {
+          "udpMode": 0,
+          "nondetLocalFailures": false,
+          "allowDatagramLoss": false,
+          "allowDatagramBeforeRequest": false,
+          "allowBindContextDatagramReordering": false,
+          "bindUseUncompressedContext": false,
+          "closeAfterFirstClientDatagram": false,
+          "closeConnectionAfterConnectResponse": false,
+          "allowFdReuse": true,
+          "udpReplyMode": 1
+        }
+      },
+      "sender": "MasqueTestDriver(2)",
+      "target": "UdpEnvironment(4)",
+      "isTargetHalted": false,
+      "clock": {
+        "MasqueTestDriver(2)": 4
+      }
+    }
+  },
+  {
+    "type": "GotoState",
+    "details": {
+      "log": "MasqueTestDriver(2) is transitioning from state \u0027Init\u0027 to state \u0027WaitingForEnvironment\u0027.",
+      "id": "MasqueTestDriver(2)",
+      "startState": "Init",
+      "endState": "WaitingForEnvironment",
+      "payload": "null",
+      "clock": {
+        "MasqueTestDriver(2)": 5
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "MasqueTestDriver(2) exits state \u0027Init\u0027.",
+      "id": "MasqueTestDriver(2)",
+      "state": "Init",
+      "payload": "null",
+      "isEntry": false,
+      "clock": {
+        "MasqueTestDriver(2)": 6
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "MasqueTestDriver(2) enters state \u0027WaitingForEnvironment\u0027.",
+      "id": "MasqueTestDriver(2)",
+      "state": "WaitingForEnvironment",
+      "payload": "null",
+      "isEntry": true,
+      "clock": {
+        "MasqueTestDriver(2)": 7
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 dequeued event \u0027eConfigureTransport with payload (\u003Cclient:MasqueClientSession(6), server:MasqueServerSession(5), driver:MasqueTestDriver(2), config:\u003CudpMode:0, nondetLocalFailures:False, allowDatagramLoss:False, allowDatagramBeforeRequest:False, allowBindContextDatagramReordering:False, bindUseUncompressedContext:False, closeAfterFirstClientDatagram:False, closeConnectionAfterConnectResponse:False, allowFdReuse:True, udpReplyMode:1, \u003E, \u003E)\u0027 in state \u0027Init\u0027.",
+      "id": "Http3Transport(3)",
+      "event": "eConfigureTransport",
+      "state": "Init",
+      "payload": {
+        "client": "MasqueClientSession(6)",
+        "server": "MasqueServerSession(5)",
+        "driver": "MasqueTestDriver(2)",
+        "config": {
+          "udpMode": 0,
+          "nondetLocalFailures": false,
+          "allowDatagramLoss": false,
+          "allowDatagramBeforeRequest": false,
+          "allowBindContextDatagramReordering": false,
+          "bindUseUncompressedContext": false,
+          "closeAfterFirstClientDatagram": false,
+          "closeConnectionAfterConnectResponse": false,
+          "allowFdReuse": true,
+          "udpReplyMode": 1
+        }
+      },
+      "clock": {
+        "Http3Transport(3)": 3,
+        "MasqueTestDriver(2)": 3
+      }
+    }
+  },
+  {
+    "type": "GotoState",
+    "details": {
+      "log": "Http3Transport(3) is transitioning from state \u0027Init\u0027 to state \u0027Active\u0027.",
+      "id": "Http3Transport(3)",
+      "startState": "Init",
+      "endState": "Active",
+      "payload": "null",
+      "clock": {
+        "Http3Transport(3)": 4,
+        "MasqueTestDriver(2)": 3
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "Http3Transport(3) exits state \u0027Init\u0027.",
+      "id": "Http3Transport(3)",
+      "state": "Init",
+      "payload": "null",
+      "isEntry": false,
+      "clock": {
+        "Http3Transport(3)": 5,
+        "MasqueTestDriver(2)": 3
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027UdpEnvironment(4)\u0027 dequeued event \u0027eConfigureUdp with payload (\u003Cserver:MasqueServerSession(5), driver:MasqueTestDriver(2), config:\u003CudpMode:0, nondetLocalFailures:False, allowDatagramLoss:False, allowDatagramBeforeRequest:False, allowBindContextDatagramReordering:False, bindUseUncompressedContext:False, closeAfterFirstClientDatagram:False, closeConnectionAfterConnectResponse:False, allowFdReuse:True, udpReplyMode:1, \u003E, \u003E)\u0027 in state \u0027Init\u0027.",
+      "id": "UdpEnvironment(4)",
+      "event": "eConfigureUdp",
+      "state": "Init",
+      "payload": {
+        "server": "MasqueServerSession(5)",
+        "driver": "MasqueTestDriver(2)",
+        "config": {
+          "udpMode": 0,
+          "nondetLocalFailures": false,
+          "allowDatagramLoss": false,
+          "allowDatagramBeforeRequest": false,
+          "allowBindContextDatagramReordering": false,
+          "bindUseUncompressedContext": false,
+          "closeAfterFirstClientDatagram": false,
+          "closeConnectionAfterConnectResponse": false,
+          "allowFdReuse": true,
+          "udpReplyMode": 1
+        }
+      },
+      "clock": {
+        "UdpEnvironment(4)": 3,
+        "MasqueTestDriver(2)": 4
+      }
+    }
+  },
+  {
+    "type": "GotoState",
+    "details": {
+      "log": "UdpEnvironment(4) is transitioning from state \u0027Init\u0027 to state \u0027Active\u0027.",
+      "id": "UdpEnvironment(4)",
+      "startState": "Init",
+      "endState": "Active",
+      "payload": "null",
+      "clock": {
+        "UdpEnvironment(4)": 4,
+        "MasqueTestDriver(2)": 4
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "UdpEnvironment(4) exits state \u0027Init\u0027.",
+      "id": "UdpEnvironment(4)",
+      "state": "Init",
+      "payload": "null",
+      "isEntry": false,
+      "clock": {
+        "UdpEnvironment(4)": 5,
+        "MasqueTestDriver(2)": 4
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027UdpEnvironment(4)\u0027 in state \u0027Init\u0027 sent event \u0027eUdpReady\u0027 to \u0027MasqueTestDriver(2)\u0027.",
+      "event": "eUdpReady",
+      "state": "Init",
+      "payload": "null",
+      "sender": "UdpEnvironment(4)",
+      "target": "MasqueTestDriver(2)",
+      "isTargetHalted": false,
+      "clock": {
+        "UdpEnvironment(4)": 6,
+        "MasqueTestDriver(2)": 4
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "UdpEnvironment(4) enters state \u0027Active\u0027.",
+      "id": "UdpEnvironment(4)",
+      "state": "Active",
+      "payload": "null",
+      "isEntry": true,
+      "clock": {
+        "UdpEnvironment(4)": 7,
+        "MasqueTestDriver(2)": 4
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027MasqueTestDriver(2)\u0027 dequeued event \u0027eUdpReady\u0027 in state \u0027WaitingForEnvironment\u0027.",
+      "id": "MasqueTestDriver(2)",
+      "event": "eUdpReady",
+      "state": "WaitingForEnvironment",
+      "payload": "null",
+      "clock": {
+        "MasqueTestDriver(2)": 8,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 in state \u0027Init\u0027 sent event \u0027eTransportReady\u0027 to \u0027MasqueTestDriver(2)\u0027.",
+      "event": "eTransportReady",
+      "state": "Init",
+      "payload": "null",
+      "sender": "Http3Transport(3)",
+      "target": "MasqueTestDriver(2)",
+      "isTargetHalted": false,
+      "clock": {
+        "Http3Transport(3)": 6,
+        "MasqueTestDriver(2)": 3
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "Http3Transport(3) enters state \u0027Active\u0027.",
+      "id": "Http3Transport(3)",
+      "state": "Active",
+      "payload": "null",
+      "isEntry": true,
+      "clock": {
+        "Http3Transport(3)": 7,
+        "MasqueTestDriver(2)": 3
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027MasqueTestDriver(2)\u0027 dequeued event \u0027eTransportReady\u0027 in state \u0027WaitingForEnvironment\u0027.",
+      "id": "MasqueTestDriver(2)",
+      "event": "eTransportReady",
+      "state": "WaitingForEnvironment",
+      "payload": "null",
+      "clock": {
+        "MasqueTestDriver(2)": 9,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "GotoState",
+    "details": {
+      "log": "MasqueTestDriver(2) is transitioning from state \u0027WaitingForEnvironment\u0027 to state \u0027Running\u0027.",
+      "id": "MasqueTestDriver(2)",
+      "startState": "WaitingForEnvironment",
+      "endState": "Running",
+      "payload": "null",
+      "clock": {
+        "MasqueTestDriver(2)": 10,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "MasqueTestDriver(2) exits state \u0027WaitingForEnvironment\u0027.",
+      "id": "MasqueTestDriver(2)",
+      "state": "WaitingForEnvironment",
+      "payload": "null",
+      "isEntry": false,
+      "clock": {
+        "MasqueTestDriver(2)": 11,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "StateTransition",
+    "details": {
+      "log": "MasqueTestDriver(2) enters state \u0027Running\u0027.",
+      "id": "MasqueTestDriver(2)",
+      "state": "Running",
+      "payload": "null",
+      "isEntry": true,
+      "clock": {
+        "MasqueTestDriver(2)": 12,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027MasqueTestDriver(2)\u0027 in state \u0027Running\u0027 sent event \u0027ceSendPacket with payload (\u003CencapsulatedSessionId:1, target:\u003Chost:10, port:443, \u003E, packet:\u003Cid:1, dataClass:0, \u003E, \u003E)\u0027 to \u0027MasqueClientSession(6)\u0027.",
+      "event": "ceSendPacket",
+      "state": "Running",
+      "payload": {
+        "encapsulatedSessionId": 1,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "packet": {
+          "id": 1,
+          "dataClass": 0
+        }
+      },
+      "sender": "MasqueTestDriver(2)",
+      "target": "MasqueClientSession(6)",
+      "isTargetHalted": false,
+      "clock": {
+        "MasqueTestDriver(2)": 13,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027MasqueClientSession(6)\u0027 dequeued event \u0027ceSendPacket with payload (\u003CencapsulatedSessionId:1, target:\u003Chost:10, port:443, \u003E, packet:\u003Cid:1, dataClass:0, \u003E, \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "MasqueClientSession(6)",
+      "event": "ceSendPacket",
+      "state": "Active",
+      "payload": {
+        "encapsulatedSessionId": 1,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "packet": {
+          "id": 1,
+          "dataClass": 0
+        }
+      },
+      "clock": {
+        "MasqueClientSession(6)": 6,
+        "MasqueTestDriver(2)": 13,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027MasqueClientSession(6)\u0027 in state \u0027Active\u0027 sent event \u0027teConnectRequest with payload (\u003CconnectionId:1, streamId:0, headers:\u003CmethodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:\u003Chost:10, port:443, \u003E, \u003E, client:MasqueClientSession(6), \u003E)\u0027 to \u0027Http3Transport(3)\u0027.",
+      "event": "teConnectRequest",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "headers": {
+          "methodIsConnect": true,
+          "protocolIsConnectUdp": true,
+          "authorityPresent": true,
+          "schemePresent": true,
+          "pathPresent": true,
+          "isBind": false,
+          "target": {
+            "host": 10,
+            "port": 443
+          }
+        },
+        "client": "MasqueClientSession(6)"
+      },
+      "sender": "MasqueClientSession(6)",
+      "target": "Http3Transport(3)",
+      "isTargetHalted": false,
+      "clock": {
+        "MasqueClientSession(6)": 7,
+        "MasqueTestDriver(2)": 13,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "MasqueClientSession(6) announced event meClientTunnelCreated with payload \u003CconnectionId:1, streamId:0, encapsulatedSessionId:1, target:\u003Chost:10, port:443, \u003E, isBind:False, \u003E.",
+      "id": "MasqueClientSession(6)",
+      "event": "meClientTunnelCreated",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "encapsulatedSessionId": 1,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "isBind": false
+      },
+      "clock": {
+        "MasqueClientSession(6)": 8,
+        "MasqueTestDriver(2)": 13,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "MonitorProcessEvent",
+    "details": {
+      "log": "TunnelIsolation is processing event \u0027meClientTunnelCreated with payload (\u003CconnectionId:1, streamId:0, encapsulatedSessionId:1, target:\u003Chost:10, port:443, \u003E, isBind:False, \u003E)\u0027 in state \u0027Check\u0027.",
+      "event": "meClientTunnelCreated",
+      "state": "Check",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "encapsulatedSessionId": 1,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "isBind": false
+      },
+      "sender": "MasqueClientSession(6)",
+      "monitor": "TunnelIsolation",
+      "clock": {
+        "TunnelIsolation": 3,
+        "MasqueClientSession(6)": 8,
+        "MasqueTestDriver(2)": 13,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "MasqueClientSession(6) announced event meClientDatagramApiAccepted with payload \u003CconnectionId:1, streamId:0, encapsulatedSessionId:1, target:\u003Chost:10, port:443, \u003E, isBind:False, contextId:0, packetId:1, \u003E.",
+      "id": "MasqueClientSession(6)",
+      "event": "meClientDatagramApiAccepted",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "encapsulatedSessionId": 1,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "isBind": false,
+        "contextId": 0,
+        "packetId": 1
+      },
+      "clock": {
+        "MasqueClientSession(6)": 9,
+        "MasqueTestDriver(2)": 13,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027MasqueClientSession(6)\u0027 in state \u0027Active\u0027 sent event \u0027teClientDatagram with payload (\u003CconnectionId:1, streamId:0, contextId:0, hasInlineTarget:False, inlineTarget:\u003Chost:0, port:0, \u003E, packet:\u003Cid:1, dataClass:0, \u003E, \u003E)\u0027 to \u0027Http3Transport(3)\u0027.",
+      "event": "teClientDatagram",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "contextId": 0,
+        "hasInlineTarget": false,
+        "inlineTarget": {
+          "host": 0,
+          "port": 0
+        },
+        "packet": {
+          "id": 1,
+          "dataClass": 0
+        }
+      },
+      "sender": "MasqueClientSession(6)",
+      "target": "Http3Transport(3)",
+      "isTargetHalted": false,
+      "clock": {
+        "MasqueClientSession(6)": 10,
+        "MasqueTestDriver(2)": 13,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027MasqueTestDriver(2)\u0027 in state \u0027Running\u0027 sent event \u0027ceCloseEncapsulatedSession with payload (1)\u0027 to \u0027MasqueClientSession(6)\u0027.",
+      "event": "ceCloseEncapsulatedSession",
+      "state": "Running",
+      "payload": 1,
+      "sender": "MasqueTestDriver(2)",
+      "target": "MasqueClientSession(6)",
+      "isTargetHalted": false,
+      "clock": {
+        "MasqueTestDriver(2)": 14,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 dequeued event \u0027teConnectRequest with payload (\u003CconnectionId:1, streamId:0, headers:\u003CmethodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:\u003Chost:10, port:443, \u003E, \u003E, client:MasqueClientSession(6), \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "Http3Transport(3)",
+      "event": "teConnectRequest",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "headers": {
+          "methodIsConnect": true,
+          "protocolIsConnectUdp": true,
+          "authorityPresent": true,
+          "schemePresent": true,
+          "pathPresent": true,
+          "isBind": false,
+          "target": {
+            "host": 10,
+            "port": 443
+          }
+        },
+        "client": "MasqueClientSession(6)"
+      },
+      "clock": {
+        "Http3Transport(3)": 8,
+        "MasqueTestDriver(2)": 13,
+        "MasqueClientSession(6)": 7,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 in state \u0027Active\u0027 sent event \u0027seConnectRequest with payload (\u003CconnectionId:1, streamId:0, headers:\u003CmethodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:\u003Chost:10, port:443, \u003E, \u003E, client:MasqueClientSession(6), \u003E)\u0027 to \u0027MasqueServerSession(5)\u0027.",
+      "event": "seConnectRequest",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "headers": {
+          "methodIsConnect": true,
+          "protocolIsConnectUdp": true,
+          "authorityPresent": true,
+          "schemePresent": true,
+          "pathPresent": true,
+          "isBind": false,
+          "target": {
+            "host": 10,
+            "port": 443
+          }
+        },
+        "client": "MasqueClientSession(6)"
+      },
+      "sender": "Http3Transport(3)",
+      "target": "MasqueServerSession(5)",
+      "isTargetHalted": false,
+      "clock": {
+        "Http3Transport(3)": 9,
+        "MasqueTestDriver(2)": 13,
+        "MasqueClientSession(6)": 7,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027MasqueTestDriver(2)\u0027 in state \u0027Running\u0027 sent event \u0027ceSendPacket with payload (\u003CencapsulatedSessionId:2, target:\u003Chost:20, port:8443, \u003E, packet:\u003Cid:2, dataClass:0, \u003E, \u003E)\u0027 to \u0027MasqueClientSession(6)\u0027.",
+      "event": "ceSendPacket",
+      "state": "Running",
+      "payload": {
+        "encapsulatedSessionId": 2,
+        "target": {
+          "host": 20,
+          "port": 8443
+        },
+        "packet": {
+          "id": 2,
+          "dataClass": 0
+        }
+      },
+      "sender": "MasqueTestDriver(2)",
+      "target": "MasqueClientSession(6)",
+      "isTargetHalted": false,
+      "clock": {
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027MasqueClientSession(6)\u0027 dequeued event \u0027ceCloseEncapsulatedSession with payload (1)\u0027 in state \u0027Active\u0027.",
+      "id": "MasqueClientSession(6)",
+      "event": "ceCloseEncapsulatedSession",
+      "state": "Active",
+      "payload": 1,
+      "clock": {
+        "MasqueClientSession(6)": 11,
+        "MasqueTestDriver(2)": 14,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "MasqueClientSession(6) announced event meClientTunnelRemoved with payload \u003CconnectionId:1, streamId:0, encapsulatedSessionId:1, target:\u003Chost:10, port:443, \u003E, isBind:False, \u003E.",
+      "id": "MasqueClientSession(6)",
+      "event": "meClientTunnelRemoved",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "encapsulatedSessionId": 1,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "isBind": false
+      },
+      "clock": {
+        "MasqueClientSession(6)": 12,
+        "MasqueTestDriver(2)": 14,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "MonitorProcessEvent",
+    "details": {
+      "log": "TunnelIsolation is processing event \u0027meClientTunnelRemoved with payload (\u003CconnectionId:1, streamId:0, encapsulatedSessionId:1, target:\u003Chost:10, port:443, \u003E, isBind:False, \u003E)\u0027 in state \u0027Check\u0027.",
+      "event": "meClientTunnelRemoved",
+      "state": "Check",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "encapsulatedSessionId": 1,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "isBind": false
+      },
+      "sender": "MasqueClientSession(6)",
+      "monitor": "TunnelIsolation",
+      "clock": {
+        "TunnelIsolation": 4,
+        "MasqueClientSession(6)": 12,
+        "MasqueTestDriver(2)": 14,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027MasqueClientSession(6)\u0027 in state \u0027Active\u0027 sent event \u0027teResetStream with payload (0)\u0027 to \u0027Http3Transport(3)\u0027.",
+      "event": "teResetStream",
+      "state": "Active",
+      "payload": 0,
+      "sender": "MasqueClientSession(6)",
+      "target": "Http3Transport(3)",
+      "isTargetHalted": false,
+      "clock": {
+        "MasqueClientSession(6)": 13,
+        "MasqueTestDriver(2)": 14,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027MasqueClientSession(6)\u0027 dequeued event \u0027ceSendPacket with payload (\u003CencapsulatedSessionId:2, target:\u003Chost:20, port:8443, \u003E, packet:\u003Cid:2, dataClass:0, \u003E, \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "MasqueClientSession(6)",
+      "event": "ceSendPacket",
+      "state": "Active",
+      "payload": {
+        "encapsulatedSessionId": 2,
+        "target": {
+          "host": 20,
+          "port": 8443
+        },
+        "packet": {
+          "id": 2,
+          "dataClass": 0
+        }
+      },
+      "clock": {
+        "MasqueClientSession(6)": 14,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027MasqueServerSession(5)\u0027 dequeued event \u0027seConnectRequest with payload (\u003CconnectionId:1, streamId:0, headers:\u003CmethodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:\u003Chost:10, port:443, \u003E, \u003E, client:MasqueClientSession(6), \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "MasqueServerSession(5)",
+      "event": "seConnectRequest",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "headers": {
+          "methodIsConnect": true,
+          "protocolIsConnectUdp": true,
+          "authorityPresent": true,
+          "schemePresent": true,
+          "pathPresent": true,
+          "isBind": false,
+          "target": {
+            "host": 10,
+            "port": 443
+          }
+        },
+        "client": "MasqueClientSession(6)"
+      },
+      "clock": {
+        "MasqueServerSession(5)": 6,
+        "Http3Transport(3)": 9,
+        "MasqueTestDriver(2)": 13,
+        "MasqueClientSession(6)": 7,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "MasqueServerSession(5) announced event meServerTunnelCreated with payload \u003CconnectionId:1, streamId:0, fdId:100, target:\u003Chost:10, port:443, \u003E, isBind:False, \u003E.",
+      "id": "MasqueServerSession(5)",
+      "event": "meServerTunnelCreated",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "fdId": 100,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "isBind": false
+      },
+      "clock": {
+        "MasqueServerSession(5)": 7,
+        "Http3Transport(3)": 9,
+        "MasqueTestDriver(2)": 13,
+        "MasqueClientSession(6)": 7,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "MonitorProcessEvent",
+    "details": {
+      "log": "TunnelIsolation is processing event \u0027meServerTunnelCreated with payload (\u003CconnectionId:1, streamId:0, fdId:100, target:\u003Chost:10, port:443, \u003E, isBind:False, \u003E)\u0027 in state \u0027Check\u0027.",
+      "event": "meServerTunnelCreated",
+      "state": "Check",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "fdId": 100,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "isBind": false
+      },
+      "sender": "MasqueServerSession(5)",
+      "monitor": "TunnelIsolation",
+      "clock": {
+        "TunnelIsolation": 5,
+        "MasqueClientSession(6)": 12,
+        "MasqueTestDriver(2)": 14,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 9,
+        "MasqueServerSession(5)": 7
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 dequeued event \u0027teClientDatagram with payload (\u003CconnectionId:1, streamId:0, contextId:0, hasInlineTarget:False, inlineTarget:\u003Chost:0, port:0, \u003E, packet:\u003Cid:1, dataClass:0, \u003E, \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "Http3Transport(3)",
+      "event": "teClientDatagram",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "contextId": 0,
+        "hasInlineTarget": false,
+        "inlineTarget": {
+          "host": 0,
+          "port": 0
+        },
+        "packet": {
+          "id": 1,
+          "dataClass": 0
+        }
+      },
+      "clock": {
+        "Http3Transport(3)": 10,
+        "MasqueTestDriver(2)": 13,
+        "MasqueClientSession(6)": 10,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027MasqueClientSession(6)\u0027 in state \u0027Active\u0027 sent event \u0027teConnectRequest with payload (\u003CconnectionId:1, streamId:4, headers:\u003CmethodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:\u003Chost:20, port:8443, \u003E, \u003E, client:MasqueClientSession(6), \u003E)\u0027 to \u0027Http3Transport(3)\u0027.",
+      "event": "teConnectRequest",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "headers": {
+          "methodIsConnect": true,
+          "protocolIsConnectUdp": true,
+          "authorityPresent": true,
+          "schemePresent": true,
+          "pathPresent": true,
+          "isBind": false,
+          "target": {
+            "host": 20,
+            "port": 8443
+          }
+        },
+        "client": "MasqueClientSession(6)"
+      },
+      "sender": "MasqueClientSession(6)",
+      "target": "Http3Transport(3)",
+      "isTargetHalted": false,
+      "clock": {
+        "MasqueClientSession(6)": 15,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "MasqueClientSession(6) announced event meClientTunnelCreated with payload \u003CconnectionId:1, streamId:4, encapsulatedSessionId:2, target:\u003Chost:20, port:8443, \u003E, isBind:False, \u003E.",
+      "id": "MasqueClientSession(6)",
+      "event": "meClientTunnelCreated",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "encapsulatedSessionId": 2,
+        "target": {
+          "host": 20,
+          "port": 8443
+        },
+        "isBind": false
+      },
+      "clock": {
+        "MasqueClientSession(6)": 16,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "MonitorProcessEvent",
+    "details": {
+      "log": "TunnelIsolation is processing event \u0027meClientTunnelCreated with payload (\u003CconnectionId:1, streamId:4, encapsulatedSessionId:2, target:\u003Chost:20, port:8443, \u003E, isBind:False, \u003E)\u0027 in state \u0027Check\u0027.",
+      "event": "meClientTunnelCreated",
+      "state": "Check",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "encapsulatedSessionId": 2,
+        "target": {
+          "host": 20,
+          "port": 8443
+        },
+        "isBind": false
+      },
+      "sender": "MasqueClientSession(6)",
+      "monitor": "TunnelIsolation",
+      "clock": {
+        "TunnelIsolation": 6,
+        "MasqueClientSession(6)": 16,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 9,
+        "MasqueServerSession(5)": 7
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "MasqueClientSession(6) announced event meClientDatagramApiAccepted with payload \u003CconnectionId:1, streamId:4, encapsulatedSessionId:2, target:\u003Chost:20, port:8443, \u003E, isBind:False, contextId:0, packetId:2, \u003E.",
+      "id": "MasqueClientSession(6)",
+      "event": "meClientDatagramApiAccepted",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "encapsulatedSessionId": 2,
+        "target": {
+          "host": 20,
+          "port": 8443
+        },
+        "isBind": false,
+        "contextId": 0,
+        "packetId": 2
+      },
+      "clock": {
+        "MasqueClientSession(6)": 17,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 in state \u0027Active\u0027 sent event \u0027seHttpDatagram with payload (\u003CconnectionId:1, streamId:0, contextId:0, hasInlineTarget:False, inlineTarget:\u003Chost:0, port:0, \u003E, packet:\u003Cid:1, dataClass:0, \u003E, \u003E)\u0027 to \u0027MasqueServerSession(5)\u0027.",
+      "event": "seHttpDatagram",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "contextId": 0,
+        "hasInlineTarget": false,
+        "inlineTarget": {
+          "host": 0,
+          "port": 0
+        },
+        "packet": {
+          "id": 1,
+          "dataClass": 0
+        }
+      },
+      "sender": "Http3Transport(3)",
+      "target": "MasqueServerSession(5)",
+      "isTargetHalted": false,
+      "clock": {
+        "Http3Transport(3)": 11,
+        "MasqueTestDriver(2)": 13,
+        "MasqueClientSession(6)": 10,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 dequeued event \u0027teResetStream with payload (0)\u0027 in state \u0027Active\u0027.",
+      "id": "Http3Transport(3)",
+      "event": "teResetStream",
+      "state": "Active",
+      "payload": 0,
+      "clock": {
+        "Http3Transport(3)": 12,
+        "MasqueTestDriver(2)": 14,
+        "MasqueClientSession(6)": 13,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027MasqueClientSession(6)\u0027 in state \u0027Active\u0027 sent event \u0027teClientDatagram with payload (\u003CconnectionId:1, streamId:4, contextId:0, hasInlineTarget:False, inlineTarget:\u003Chost:0, port:0, \u003E, packet:\u003Cid:2, dataClass:0, \u003E, \u003E)\u0027 to \u0027Http3Transport(3)\u0027.",
+      "event": "teClientDatagram",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "contextId": 0,
+        "hasInlineTarget": false,
+        "inlineTarget": {
+          "host": 0,
+          "port": 0
+        },
+        "packet": {
+          "id": 2,
+          "dataClass": 0
+        }
+      },
+      "sender": "MasqueClientSession(6)",
+      "target": "Http3Transport(3)",
+      "isTargetHalted": false,
+      "clock": {
+        "MasqueClientSession(6)": 18,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 6
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 in state \u0027Active\u0027 sent event \u0027ceStreamClosed with payload (0)\u0027 to \u0027MasqueClientSession(6)\u0027.",
+      "event": "ceStreamClosed",
+      "state": "Active",
+      "payload": 0,
+      "sender": "Http3Transport(3)",
+      "target": "MasqueClientSession(6)",
+      "isTargetHalted": false,
+      "clock": {
+        "Http3Transport(3)": 13,
+        "MasqueTestDriver(2)": 14,
+        "MasqueClientSession(6)": 13,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027MasqueClientSession(6)\u0027 dequeued event \u0027ceStreamClosed with payload (0)\u0027 in state \u0027Active\u0027.",
+      "id": "MasqueClientSession(6)",
+      "event": "ceStreamClosed",
+      "state": "Active",
+      "payload": 0,
+      "clock": {
+        "MasqueClientSession(6)": 19,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 13
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 in state \u0027Active\u0027 sent event \u0027seStreamClosed with payload (0)\u0027 to \u0027MasqueServerSession(5)\u0027.",
+      "event": "seStreamClosed",
+      "state": "Active",
+      "payload": 0,
+      "sender": "Http3Transport(3)",
+      "target": "MasqueServerSession(5)",
+      "isTargetHalted": false,
+      "clock": {
+        "Http3Transport(3)": 14,
+        "MasqueTestDriver(2)": 14,
+        "MasqueClientSession(6)": 13,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027MasqueServerSession(5)\u0027 in state \u0027Active\u0027 sent event \u0027teConnectResponse with payload (\u003CconnectionId:1, streamId:0, responseClass:0, client:MasqueClientSession(6), \u003E)\u0027 to \u0027Http3Transport(3)\u0027.",
+      "event": "teConnectResponse",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "responseClass": 0,
+        "client": "MasqueClientSession(6)"
+      },
+      "sender": "MasqueServerSession(5)",
+      "target": "Http3Transport(3)",
+      "isTargetHalted": false,
+      "clock": {
+        "MasqueServerSession(5)": 8,
+        "Http3Transport(3)": 9,
+        "MasqueTestDriver(2)": 13,
+        "MasqueClientSession(6)": 7,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027MasqueServerSession(5)\u0027 dequeued event \u0027seHttpDatagram with payload (\u003CconnectionId:1, streamId:0, contextId:0, hasInlineTarget:False, inlineTarget:\u003Chost:0, port:0, \u003E, packet:\u003Cid:1, dataClass:0, \u003E, \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "MasqueServerSession(5)",
+      "event": "seHttpDatagram",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "contextId": 0,
+        "hasInlineTarget": false,
+        "inlineTarget": {
+          "host": 0,
+          "port": 0
+        },
+        "packet": {
+          "id": 1,
+          "dataClass": 0
+        }
+      },
+      "clock": {
+        "MasqueServerSession(5)": 9,
+        "Http3Transport(3)": 11,
+        "MasqueTestDriver(2)": 13,
+        "MasqueClientSession(6)": 10,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "MasqueServerSession(5) announced event meProxyDatagramForwardedToTarget with payload \u003CconnectionId:1, streamId:0, fdId:100, target:\u003Chost:10, port:443, \u003E, isBind:False, contextId:0, packetId:1, \u003E.",
+      "id": "MasqueServerSession(5)",
+      "event": "meProxyDatagramForwardedToTarget",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "fdId": 100,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "isBind": false,
+        "contextId": 0,
+        "packetId": 1
+      },
+      "clock": {
+        "MasqueServerSession(5)": 10,
+        "Http3Transport(3)": 11,
+        "MasqueTestDriver(2)": 13,
+        "MasqueClientSession(6)": 10,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "MonitorProcessEvent",
+    "details": {
+      "log": "TunnelIsolation is processing event \u0027meProxyDatagramForwardedToTarget with payload (\u003CconnectionId:1, streamId:0, fdId:100, target:\u003Chost:10, port:443, \u003E, isBind:False, contextId:0, packetId:1, \u003E)\u0027 in state \u0027Check\u0027.",
+      "event": "meProxyDatagramForwardedToTarget",
+      "state": "Check",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "fdId": 100,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "isBind": false,
+        "contextId": 0,
+        "packetId": 1
+      },
+      "sender": "MasqueServerSession(5)",
+      "monitor": "TunnelIsolation",
+      "clock": {
+        "TunnelIsolation": 7,
+        "MasqueClientSession(6)": 16,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 11,
+        "MasqueServerSession(5)": 10
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 dequeued event \u0027teConnectRequest with payload (\u003CconnectionId:1, streamId:4, headers:\u003CmethodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:\u003Chost:20, port:8443, \u003E, \u003E, client:MasqueClientSession(6), \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "Http3Transport(3)",
+      "event": "teConnectRequest",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "headers": {
+          "methodIsConnect": true,
+          "protocolIsConnectUdp": true,
+          "authorityPresent": true,
+          "schemePresent": true,
+          "pathPresent": true,
+          "isBind": false,
+          "target": {
+            "host": 20,
+            "port": 8443
+          }
+        },
+        "client": "MasqueClientSession(6)"
+      },
+      "clock": {
+        "Http3Transport(3)": 15,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 15,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 in state \u0027Active\u0027 sent event \u0027seConnectRequest with payload (\u003CconnectionId:1, streamId:4, headers:\u003CmethodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:\u003Chost:20, port:8443, \u003E, \u003E, client:MasqueClientSession(6), \u003E)\u0027 to \u0027MasqueServerSession(5)\u0027.",
+      "event": "seConnectRequest",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "headers": {
+          "methodIsConnect": true,
+          "protocolIsConnectUdp": true,
+          "authorityPresent": true,
+          "schemePresent": true,
+          "pathPresent": true,
+          "isBind": false,
+          "target": {
+            "host": 20,
+            "port": 8443
+          }
+        },
+        "client": "MasqueClientSession(6)"
+      },
+      "sender": "Http3Transport(3)",
+      "target": "MasqueServerSession(5)",
+      "isTargetHalted": false,
+      "clock": {
+        "Http3Transport(3)": 16,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 15,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 dequeued event \u0027teClientDatagram with payload (\u003CconnectionId:1, streamId:4, contextId:0, hasInlineTarget:False, inlineTarget:\u003Chost:0, port:0, \u003E, packet:\u003Cid:2, dataClass:0, \u003E, \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "Http3Transport(3)",
+      "event": "teClientDatagram",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "contextId": 0,
+        "hasInlineTarget": false,
+        "inlineTarget": {
+          "host": 0,
+          "port": 0
+        },
+        "packet": {
+          "id": 2,
+          "dataClass": 0
+        }
+      },
+      "clock": {
+        "Http3Transport(3)": 17,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 18,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 in state \u0027Active\u0027 sent event \u0027seHttpDatagram with payload (\u003CconnectionId:1, streamId:4, contextId:0, hasInlineTarget:False, inlineTarget:\u003Chost:0, port:0, \u003E, packet:\u003Cid:2, dataClass:0, \u003E, \u003E)\u0027 to \u0027MasqueServerSession(5)\u0027.",
+      "event": "seHttpDatagram",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "contextId": 0,
+        "hasInlineTarget": false,
+        "inlineTarget": {
+          "host": 0,
+          "port": 0
+        },
+        "packet": {
+          "id": 2,
+          "dataClass": 0
+        }
+      },
+      "sender": "Http3Transport(3)",
+      "target": "MasqueServerSession(5)",
+      "isTargetHalted": false,
+      "clock": {
+        "Http3Transport(3)": 18,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 18,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 dequeued event \u0027teConnectResponse with payload (\u003CconnectionId:1, streamId:0, responseClass:0, client:MasqueClientSession(6), \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "Http3Transport(3)",
+      "event": "teConnectResponse",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "responseClass": 0,
+        "client": "MasqueClientSession(6)"
+      },
+      "clock": {
+        "Http3Transport(3)": 19,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 18,
+        "UdpEnvironment(4)": 6,
+        "MasqueServerSession(5)": 8
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027MasqueServerSession(5)\u0027 in state \u0027Active\u0027 sent event \u0027ueProxyWrite with payload (\u003CconnectionId:1, streamId:0, fdId:100, target:\u003Chost:10, port:443, \u003E, isBind:False, contextId:0, packet:\u003Cid:1, dataClass:0, \u003E, server:MasqueServerSession(5), \u003E)\u0027 to \u0027UdpEnvironment(4)\u0027.",
+      "event": "ueProxyWrite",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "fdId": 100,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "isBind": false,
+        "contextId": 0,
+        "packet": {
+          "id": 1,
+          "dataClass": 0
+        },
+        "server": "MasqueServerSession(5)"
+      },
+      "sender": "MasqueServerSession(5)",
+      "target": "UdpEnvironment(4)",
+      "isTargetHalted": false,
+      "clock": {
+        "MasqueServerSession(5)": 11,
+        "Http3Transport(3)": 11,
+        "MasqueTestDriver(2)": 13,
+        "MasqueClientSession(6)": 10,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027UdpEnvironment(4)\u0027 dequeued event \u0027ueProxyWrite with payload (\u003CconnectionId:1, streamId:0, fdId:100, target:\u003Chost:10, port:443, \u003E, isBind:False, contextId:0, packet:\u003Cid:1, dataClass:0, \u003E, server:MasqueServerSession(5), \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "UdpEnvironment(4)",
+      "event": "ueProxyWrite",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "fdId": 100,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "isBind": false,
+        "contextId": 0,
+        "packet": {
+          "id": 1,
+          "dataClass": 0
+        },
+        "server": "MasqueServerSession(5)"
+      },
+      "clock": {
+        "UdpEnvironment(4)": 8,
+        "MasqueTestDriver(2)": 13,
+        "MasqueServerSession(5)": 11,
+        "Http3Transport(3)": 11,
+        "MasqueClientSession(6)": 10
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "UdpEnvironment(4) announced event meTargetReceivedPacket with payload \u003CconnectionId:1, streamId:0, fdId:100, target:\u003Chost:10, port:443, \u003E, isBind:False, contextId:0, packetId:1, \u003E.",
+      "id": "UdpEnvironment(4)",
+      "event": "meTargetReceivedPacket",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "fdId": 100,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "isBind": false,
+        "contextId": 0,
+        "packetId": 1
+      },
+      "clock": {
+        "UdpEnvironment(4)": 9,
+        "MasqueTestDriver(2)": 13,
+        "MasqueServerSession(5)": 11,
+        "Http3Transport(3)": 11,
+        "MasqueClientSession(6)": 10
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "UdpEnvironment(4) announced event meUdpReplyGenerated with payload \u003CconnectionId:1, expectedStreamId:0, expectedFdId:100, expectedTarget:\u003Chost:10, port:443, \u003E, expectedContextId:0, isBind:False, source:\u003Chost:10, port:443, \u003E, validSource:True, packetId:1001, \u003E.",
+      "id": "UdpEnvironment(4)",
+      "event": "meUdpReplyGenerated",
+      "payload": {
+        "connectionId": 1,
+        "expectedStreamId": 0,
+        "expectedFdId": 100,
+        "expectedTarget": {
+          "host": 10,
+          "port": 443
+        },
+        "expectedContextId": 0,
+        "isBind": false,
+        "source": {
+          "host": 10,
+          "port": 443
+        },
+        "validSource": true,
+        "packetId": 1001
+      },
+      "clock": {
+        "UdpEnvironment(4)": 10,
+        "MasqueTestDriver(2)": 13,
+        "MasqueServerSession(5)": 11,
+        "Http3Transport(3)": 11,
+        "MasqueClientSession(6)": 10
+      }
+    }
+  },
+  {
+    "type": "MonitorProcessEvent",
+    "details": {
+      "log": "TunnelIsolation is processing event \u0027meUdpReplyGenerated with payload (\u003CconnectionId:1, expectedStreamId:0, expectedFdId:100, expectedTarget:\u003Chost:10, port:443, \u003E, expectedContextId:0, isBind:False, source:\u003Chost:10, port:443, \u003E, validSource:True, packetId:1001, \u003E)\u0027 in state \u0027Check\u0027.",
+      "event": "meUdpReplyGenerated",
+      "state": "Check",
+      "payload": {
+        "connectionId": 1,
+        "expectedStreamId": 0,
+        "expectedFdId": 100,
+        "expectedTarget": {
+          "host": 10,
+          "port": 443
+        },
+        "expectedContextId": 0,
+        "isBind": false,
+        "source": {
+          "host": 10,
+          "port": 443
+        },
+        "validSource": true,
+        "packetId": 1001
+      },
+      "sender": "UdpEnvironment(4)",
+      "monitor": "TunnelIsolation",
+      "clock": {
+        "TunnelIsolation": 8,
+        "MasqueClientSession(6)": 16,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 10,
+        "Http3Transport(3)": 11,
+        "MasqueServerSession(5)": 11
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 in state \u0027Active\u0027 sent event \u0027ceConnectResponse with payload (\u003CconnectionId:1, streamId:0, responseClass:0, client:MasqueClientSession(6), \u003E)\u0027 to \u0027MasqueClientSession(6)\u0027.",
+      "event": "ceConnectResponse",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "responseClass": 0,
+        "client": "MasqueClientSession(6)"
+      },
+      "sender": "Http3Transport(3)",
+      "target": "MasqueClientSession(6)",
+      "isTargetHalted": false,
+      "clock": {
+        "Http3Transport(3)": 20,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 18,
+        "UdpEnvironment(4)": 6,
+        "MasqueServerSession(5)": 8
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027MasqueClientSession(6)\u0027 dequeued event \u0027ceConnectResponse with payload (\u003CconnectionId:1, streamId:0, responseClass:0, client:MasqueClientSession(6), \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "MasqueClientSession(6)",
+      "event": "ceConnectResponse",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "responseClass": 0,
+        "client": "MasqueClientSession(6)"
+      },
+      "clock": {
+        "MasqueClientSession(6)": 20,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 20,
+        "MasqueServerSession(5)": 8
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "MasqueClientSession(6) announced event meConnectResponseObserved with payload \u003CconnectionId:1, streamId:0, responseClass:0, \u003E.",
+      "id": "MasqueClientSession(6)",
+      "event": "meConnectResponseObserved",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "responseClass": 0
+      },
+      "clock": {
+        "MasqueClientSession(6)": 21,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 20,
+        "MasqueServerSession(5)": 8
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027MasqueServerSession(5)\u0027 dequeued event \u0027seStreamClosed with payload (0)\u0027 in state \u0027Active\u0027.",
+      "id": "MasqueServerSession(5)",
+      "event": "seStreamClosed",
+      "state": "Active",
+      "payload": 0,
+      "clock": {
+        "MasqueServerSession(5)": 12,
+        "Http3Transport(3)": 14,
+        "MasqueTestDriver(2)": 14,
+        "MasqueClientSession(6)": 13,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "MasqueServerSession(5) announced event meServerTunnelRemoved with payload \u003CconnectionId:1, streamId:0, fdId:100, target:\u003Chost:10, port:443, \u003E, isBind:False, \u003E.",
+      "id": "MasqueServerSession(5)",
+      "event": "meServerTunnelRemoved",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "fdId": 100,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "isBind": false
+      },
+      "clock": {
+        "MasqueServerSession(5)": 13,
+        "Http3Transport(3)": 14,
+        "MasqueTestDriver(2)": 14,
+        "MasqueClientSession(6)": 13,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "MonitorProcessEvent",
+    "details": {
+      "log": "TunnelIsolation is processing event \u0027meServerTunnelRemoved with payload (\u003CconnectionId:1, streamId:0, fdId:100, target:\u003Chost:10, port:443, \u003E, isBind:False, \u003E)\u0027 in state \u0027Check\u0027.",
+      "event": "meServerTunnelRemoved",
+      "state": "Check",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 0,
+        "fdId": 100,
+        "target": {
+          "host": 10,
+          "port": 443
+        },
+        "isBind": false
+      },
+      "sender": "MasqueServerSession(5)",
+      "monitor": "TunnelIsolation",
+      "clock": {
+        "TunnelIsolation": 9,
+        "MasqueClientSession(6)": 16,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 10,
+        "Http3Transport(3)": 14,
+        "MasqueServerSession(5)": 13
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027MasqueServerSession(5)\u0027 dequeued event \u0027seConnectRequest with payload (\u003CconnectionId:1, streamId:4, headers:\u003CmethodIsConnect:True, protocolIsConnectUdp:True, authorityPresent:True, schemePresent:True, pathPresent:True, isBind:False, target:\u003Chost:20, port:8443, \u003E, \u003E, client:MasqueClientSession(6), \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "MasqueServerSession(5)",
+      "event": "seConnectRequest",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "headers": {
+          "methodIsConnect": true,
+          "protocolIsConnectUdp": true,
+          "authorityPresent": true,
+          "schemePresent": true,
+          "pathPresent": true,
+          "isBind": false,
+          "target": {
+            "host": 20,
+            "port": 8443
+          }
+        },
+        "client": "MasqueClientSession(6)"
+      },
+      "clock": {
+        "MasqueServerSession(5)": 14,
+        "Http3Transport(3)": 16,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 15,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "MasqueServerSession(5) announced event meServerTunnelCreated with payload \u003CconnectionId:1, streamId:4, fdId:100, target:\u003Chost:20, port:8443, \u003E, isBind:False, \u003E.",
+      "id": "MasqueServerSession(5)",
+      "event": "meServerTunnelCreated",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "fdId": 100,
+        "target": {
+          "host": 20,
+          "port": 8443
+        },
+        "isBind": false
+      },
+      "clock": {
+        "MasqueServerSession(5)": 15,
+        "Http3Transport(3)": 16,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 15,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "MonitorProcessEvent",
+    "details": {
+      "log": "TunnelIsolation is processing event \u0027meServerTunnelCreated with payload (\u003CconnectionId:1, streamId:4, fdId:100, target:\u003Chost:20, port:8443, \u003E, isBind:False, \u003E)\u0027 in state \u0027Check\u0027.",
+      "event": "meServerTunnelCreated",
+      "state": "Check",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "fdId": 100,
+        "target": {
+          "host": 20,
+          "port": 8443
+        },
+        "isBind": false
+      },
+      "sender": "MasqueServerSession(5)",
+      "monitor": "TunnelIsolation",
+      "clock": {
+        "TunnelIsolation": 10,
+        "MasqueClientSession(6)": 16,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 10,
+        "Http3Transport(3)": 16,
+        "MasqueServerSession(5)": 15
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027UdpEnvironment(4)\u0027 in state \u0027Active\u0027 sent event \u0027seUdpReadable with payload (\u003CconnectionId:1, fdId:100, source:\u003Chost:10, port:443, \u003E, packet:\u003Cid:1001, dataClass:0, \u003E, \u003E)\u0027 to \u0027MasqueServerSession(5)\u0027.",
+      "event": "seUdpReadable",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "fdId": 100,
+        "source": {
+          "host": 10,
+          "port": 443
+        },
+        "packet": {
+          "id": 1001,
+          "dataClass": 0
+        }
+      },
+      "sender": "UdpEnvironment(4)",
+      "target": "MasqueServerSession(5)",
+      "isTargetHalted": false,
+      "clock": {
+        "UdpEnvironment(4)": 11,
+        "MasqueTestDriver(2)": 13,
+        "MasqueServerSession(5)": 11,
+        "Http3Transport(3)": 11,
+        "MasqueClientSession(6)": 10
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027MasqueServerSession(5)\u0027 in state \u0027Active\u0027 sent event \u0027teConnectResponse with payload (\u003CconnectionId:1, streamId:4, responseClass:0, client:MasqueClientSession(6), \u003E)\u0027 to \u0027Http3Transport(3)\u0027.",
+      "event": "teConnectResponse",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "responseClass": 0,
+        "client": "MasqueClientSession(6)"
+      },
+      "sender": "MasqueServerSession(5)",
+      "target": "Http3Transport(3)",
+      "isTargetHalted": false,
+      "clock": {
+        "MasqueServerSession(5)": 16,
+        "Http3Transport(3)": 16,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 15,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 dequeued event \u0027teConnectResponse with payload (\u003CconnectionId:1, streamId:4, responseClass:0, client:MasqueClientSession(6), \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "Http3Transport(3)",
+      "event": "teConnectResponse",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "responseClass": 0,
+        "client": "MasqueClientSession(6)"
+      },
+      "clock": {
+        "Http3Transport(3)": 21,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 18,
+        "UdpEnvironment(4)": 6,
+        "MasqueServerSession(5)": 16
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027Http3Transport(3)\u0027 in state \u0027Active\u0027 sent event \u0027ceConnectResponse with payload (\u003CconnectionId:1, streamId:4, responseClass:0, client:MasqueClientSession(6), \u003E)\u0027 to \u0027MasqueClientSession(6)\u0027.",
+      "event": "ceConnectResponse",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "responseClass": 0,
+        "client": "MasqueClientSession(6)"
+      },
+      "sender": "Http3Transport(3)",
+      "target": "MasqueClientSession(6)",
+      "isTargetHalted": false,
+      "clock": {
+        "Http3Transport(3)": 22,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 18,
+        "UdpEnvironment(4)": 6,
+        "MasqueServerSession(5)": 16
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027MasqueServerSession(5)\u0027 dequeued event \u0027seHttpDatagram with payload (\u003CconnectionId:1, streamId:4, contextId:0, hasInlineTarget:False, inlineTarget:\u003Chost:0, port:0, \u003E, packet:\u003Cid:2, dataClass:0, \u003E, \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "MasqueServerSession(5)",
+      "event": "seHttpDatagram",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "contextId": 0,
+        "hasInlineTarget": false,
+        "inlineTarget": {
+          "host": 0,
+          "port": 0
+        },
+        "packet": {
+          "id": 2,
+          "dataClass": 0
+        }
+      },
+      "clock": {
+        "MasqueServerSession(5)": 17,
+        "Http3Transport(3)": 18,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 18,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "MasqueServerSession(5) announced event meProxyDatagramForwardedToTarget with payload \u003CconnectionId:1, streamId:4, fdId:100, target:\u003Chost:20, port:8443, \u003E, isBind:False, contextId:0, packetId:2, \u003E.",
+      "id": "MasqueServerSession(5)",
+      "event": "meProxyDatagramForwardedToTarget",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "fdId": 100,
+        "target": {
+          "host": 20,
+          "port": 8443
+        },
+        "isBind": false,
+        "contextId": 0,
+        "packetId": 2
+      },
+      "clock": {
+        "MasqueServerSession(5)": 18,
+        "Http3Transport(3)": 18,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 18,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "MonitorProcessEvent",
+    "details": {
+      "log": "TunnelIsolation is processing event \u0027meProxyDatagramForwardedToTarget with payload (\u003CconnectionId:1, streamId:4, fdId:100, target:\u003Chost:20, port:8443, \u003E, isBind:False, contextId:0, packetId:2, \u003E)\u0027 in state \u0027Check\u0027.",
+      "event": "meProxyDatagramForwardedToTarget",
+      "state": "Check",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "fdId": 100,
+        "target": {
+          "host": 20,
+          "port": 8443
+        },
+        "isBind": false,
+        "contextId": 0,
+        "packetId": 2
+      },
+      "sender": "MasqueServerSession(5)",
+      "monitor": "TunnelIsolation",
+      "clock": {
+        "TunnelIsolation": 11,
+        "MasqueClientSession(6)": 18,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 10,
+        "Http3Transport(3)": 18,
+        "MasqueServerSession(5)": 18
+      }
+    }
+  },
+  {
+    "type": "SendEvent",
+    "details": {
+      "log": "\u0027MasqueServerSession(5)\u0027 in state \u0027Active\u0027 sent event \u0027ueProxyWrite with payload (\u003CconnectionId:1, streamId:4, fdId:100, target:\u003Chost:20, port:8443, \u003E, isBind:False, contextId:0, packet:\u003Cid:2, dataClass:0, \u003E, server:MasqueServerSession(5), \u003E)\u0027 to \u0027UdpEnvironment(4)\u0027.",
+      "event": "ueProxyWrite",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "fdId": 100,
+        "target": {
+          "host": 20,
+          "port": 8443
+        },
+        "isBind": false,
+        "contextId": 0,
+        "packet": {
+          "id": 2,
+          "dataClass": 0
+        },
+        "server": "MasqueServerSession(5)"
+      },
+      "sender": "MasqueServerSession(5)",
+      "target": "UdpEnvironment(4)",
+      "isTargetHalted": false,
+      "clock": {
+        "MasqueServerSession(5)": 19,
+        "Http3Transport(3)": 18,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 18,
+        "UdpEnvironment(4)": 6
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027MasqueClientSession(6)\u0027 dequeued event \u0027ceConnectResponse with payload (\u003CconnectionId:1, streamId:4, responseClass:0, client:MasqueClientSession(6), \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "MasqueClientSession(6)",
+      "event": "ceConnectResponse",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "responseClass": 0,
+        "client": "MasqueClientSession(6)"
+      },
+      "clock": {
+        "MasqueClientSession(6)": 22,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 22,
+        "MasqueServerSession(5)": 16
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "MasqueClientSession(6) announced event meConnectResponseObserved with payload \u003CconnectionId:1, streamId:4, responseClass:0, \u003E.",
+      "id": "MasqueClientSession(6)",
+      "event": "meConnectResponseObserved",
+      "payload": {
+        "connectionId": 1,
+        "streamId": 4,
+        "responseClass": 0
+      },
+      "clock": {
+        "MasqueClientSession(6)": 23,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 6,
+        "Http3Transport(3)": 22,
+        "MasqueServerSession(5)": 16
+      }
+    }
+  },
+  {
+    "type": "DequeueEvent",
+    "details": {
+      "log": "\u0027MasqueServerSession(5)\u0027 dequeued event \u0027seUdpReadable with payload (\u003CconnectionId:1, fdId:100, source:\u003Chost:10, port:443, \u003E, packet:\u003Cid:1001, dataClass:0, \u003E, \u003E)\u0027 in state \u0027Active\u0027.",
+      "id": "MasqueServerSession(5)",
+      "event": "seUdpReadable",
+      "state": "Active",
+      "payload": {
+        "connectionId": 1,
+        "fdId": 100,
+        "source": {
+          "host": 10,
+          "port": 443
+        },
+        "packet": {
+          "id": 1001,
+          "dataClass": 0
+        }
+      },
+      "clock": {
+        "MasqueServerSession(5)": 20,
+        "Http3Transport(3)": 18,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 18,
+        "UdpEnvironment(4)": 11
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "MasqueServerSession(5) announced event meUdpReadableObserved with payload \u003CconnectionId:1, fdId:100, source:\u003Chost:10, port:443, \u003E, expectedTarget:\u003Chost:20, port:8443, \u003E, packetId:1001, \u003E.",
+      "id": "MasqueServerSession(5)",
+      "event": "meUdpReadableObserved",
+      "payload": {
+        "connectionId": 1,
+        "fdId": 100,
+        "source": {
+          "host": 10,
+          "port": 443
+        },
+        "expectedTarget": {
+          "host": 20,
+          "port": 8443
+        },
+        "packetId": 1001
+      },
+      "clock": {
+        "MasqueServerSession(5)": 21,
+        "Http3Transport(3)": 18,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 18,
+        "UdpEnvironment(4)": 11
+      }
+    }
+  },
+  {
+    "type": "Announce",
+    "details": {
+      "log": "MasqueServerSession(5) announced event meUnexpectedUdpDropped with payload \u003CconnectionId:1, fdId:100, source:\u003Chost:10, port:443, \u003E, expectedTarget:\u003Chost:20, port:8443, \u003E, packetId:1001, \u003E.",
+      "id": "MasqueServerSession(5)",
+      "event": "meUnexpectedUdpDropped",
+      "payload": {
+        "connectionId": 1,
+        "fdId": 100,
+        "source": {
+          "host": 10,
+          "port": 443
+        },
+        "expectedTarget": {
+          "host": 20,
+          "port": 8443
+        },
+        "packetId": 1001
+      },
+      "clock": {
+        "MasqueServerSession(5)": 22,
+        "Http3Transport(3)": 18,
+        "MasqueTestDriver(2)": 15,
+        "MasqueClientSession(6)": 18,
+        "UdpEnvironment(4)": 11
+      }
+    }
+  },
+  {
+    "type": "MonitorProcessEvent",
+    "details": {
+      "log": "TunnelIsolation is processing event \u0027meUnexpectedUdpDropped with payload (\u003CconnectionId:1, fdId:100, source:\u003Chost:10, port:443, \u003E, expectedTarget:\u003Chost:20, port:8443, \u003E, packetId:1001, \u003E)\u0027 in state \u0027Check\u0027.",
+      "event": "meUnexpectedUdpDropped",
+      "state": "Check",
+      "payload": {
+        "connectionId": 1,
+        "fdId": 100,
+        "source": {
+          "host": 10,
+          "port": 443
+        },
+        "expectedTarget": {
+          "host": 20,
+          "port": 8443
+        },
+        "packetId": 1001
+      },
+      "sender": "MasqueServerSession(5)",
+      "monitor": "TunnelIsolation",
+      "clock": {
+        "TunnelIsolation": 12,
+        "MasqueClientSession(6)": 18,
+        "MasqueTestDriver(2)": 15,
+        "UdpEnvironment(4)": 11,
+        "Http3Transport(3)": 18,
+        "MasqueServerSession(5)": 22
+      }
+    }
+  },
+  {
+    "type": "AssertionFailure",
+    "details": {
+      "log": "Assertion Failed: PSpec/TunnelIsolation.p:167:21 Valid UDP reply \u003CconnectionId:1, packetId:1001, \u003E was rejected as unexpected; expected stream 0, fd 100, target \u003Chost:10, port:443, \u003E",
+      "error": "Assertion Failed: PSpec/TunnelIsolation.p:167:21 Valid UDP reply \u003CconnectionId:1, packetId:1001, \u003E was rejected as unexpected; expected stream 0, fd 100, target \u003Chost:10, port:443, \u003E",
+      "payload": "null"
+    }
+  },
+  {
+    "type": "StrategyDescription",
+    "details": {
+      "log": "Found bug using \u0027random\u0027 strategy.",
+      "payload": "null",
+      "strategy": "random",
+      "strategyDescription": "random[seed \u00272062336277\u0027]"
+    }
+  }
+]

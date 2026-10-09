@@ -1,0 +1,55 @@
+<TestLog> Running test 'tcBindStateCreationSafety'.
+<CreateLog> PImplementation.BindStateCreationSafety was created.
+<MonitorLog> PImplementation.BindStateCreationSafety enters state 'Safe'.
+<CreateLog> BindCreateFailureDriver(1) was created by task '2'.
+<StateLog> BindCreateFailureDriver(1) enters state 'Init'.
+<CreateLog> MasqueTestDriver(2) was created by BindCreateFailureDriver(1).
+<StateLog> MasqueTestDriver(2) enters state 'Init'.
+<CreateLog> Http3Transport(3) was created by MasqueTestDriver(2).
+<StateLog> Http3Transport(3) enters state 'Init'.
+<CreateLog> UdpEnvironment(4) was created by MasqueTestDriver(2).
+<CreateLog> MasqueServerSession(5) was created by MasqueTestDriver(2).
+<StateLog> MasqueServerSession(5) enters state 'Init'.
+<GotoLog> MasqueServerSession(5) is transitioning from state 'Init' to state 'PImplementation.MasqueServerSession.Active'.
+<StateLog> MasqueServerSession(5) exits state 'Init'.
+<StateLog> MasqueServerSession(5) enters state 'Active'.
+<StateLog> UdpEnvironment(4) enters state 'Init'.
+<CreateLog> MasqueClientSession(6) was created by MasqueTestDriver(2).
+<StateLog> MasqueClientSession(6) enters state 'Init'.
+<GotoLog> MasqueClientSession(6) is transitioning from state 'Init' to state 'PImplementation.MasqueClientSession.Active'.
+<StateLog> MasqueClientSession(6) exits state 'Init'.
+<StateLog> MasqueClientSession(6) enters state 'Active'.
+<SendLog> 'MasqueTestDriver(2)' in state 'Init' sent event 'eConfigureTransport with payload (<client:MasqueClientSession(6), server:MasqueServerSession(5), driver:MasqueTestDriver(2), config:<udpMode:1, nondetLocalFailures:True, allowDatagramLoss:False, allowDatagramBeforeRequest:False, allowBindContextDatagramReordering:False, bindUseUncompressedContext:False, closeAfterFirstClientDatagram:False, closeConnectionAfterConnectResponse:False, allowFdReuse:False, udpReplyMode:1, >, >)' to 'Http3Transport(3)'.
+<DequeueLog> 'Http3Transport(3)' dequeued event 'eConfigureTransport with payload (<client:MasqueClientSession(6), server:MasqueServerSession(5), driver:MasqueTestDriver(2), config:<udpMode:1, nondetLocalFailures:True, allowDatagramLoss:False, allowDatagramBeforeRequest:False, allowBindContextDatagramReordering:False, bindUseUncompressedContext:False, closeAfterFirstClientDatagram:False, closeConnectionAfterConnectResponse:False, allowFdReuse:False, udpReplyMode:1, >, >)' in state 'Init'.
+<GotoLog> Http3Transport(3) is transitioning from state 'Init' to state 'PImplementation.Http3Transport.Active'.
+<StateLog> Http3Transport(3) exits state 'Init'.
+<SendLog> 'MasqueTestDriver(2)' in state 'Init' sent event 'eConfigureUdp with payload (<server:MasqueServerSession(5), driver:MasqueTestDriver(2), config:<udpMode:1, nondetLocalFailures:True, allowDatagramLoss:False, allowDatagramBeforeRequest:False, allowBindContextDatagramReordering:False, bindUseUncompressedContext:False, closeAfterFirstClientDatagram:False, closeConnectionAfterConnectResponse:False, allowFdReuse:False, udpReplyMode:1, >, >)' to 'UdpEnvironment(4)'.
+<GotoLog> MasqueTestDriver(2) is transitioning from state 'Init' to state 'PImplementation.MasqueTestDriver.WaitingForEnvironment'.
+<StateLog> MasqueTestDriver(2) exits state 'Init'.
+<StateLog> MasqueTestDriver(2) enters state 'WaitingForEnvironment'.
+<DequeueLog> 'UdpEnvironment(4)' dequeued event 'eConfigureUdp with payload (<server:MasqueServerSession(5), driver:MasqueTestDriver(2), config:<udpMode:1, nondetLocalFailures:True, allowDatagramLoss:False, allowDatagramBeforeRequest:False, allowBindContextDatagramReordering:False, bindUseUncompressedContext:False, closeAfterFirstClientDatagram:False, closeConnectionAfterConnectResponse:False, allowFdReuse:False, udpReplyMode:1, >, >)' in state 'Init'.
+<GotoLog> UdpEnvironment(4) is transitioning from state 'Init' to state 'PImplementation.UdpEnvironment.Active'.
+<StateLog> UdpEnvironment(4) exits state 'Init'.
+<SendLog> 'UdpEnvironment(4)' in state 'Init' sent event 'eUdpReady' to 'MasqueTestDriver(2)'.
+<StateLog> UdpEnvironment(4) enters state 'Active'.
+<DequeueLog> 'MasqueTestDriver(2)' dequeued event 'eUdpReady' in state 'WaitingForEnvironment'.
+<SendLog> 'Http3Transport(3)' in state 'Init' sent event 'eTransportReady' to 'MasqueTestDriver(2)'.
+<StateLog> Http3Transport(3) enters state 'Active'.
+<DequeueLog> 'MasqueTestDriver(2)' dequeued event 'eTransportReady' in state 'WaitingForEnvironment'.
+<GotoLog> MasqueTestDriver(2) is transitioning from state 'WaitingForEnvironment' to state 'PImplementation.MasqueTestDriver.Running'.
+<StateLog> MasqueTestDriver(2) exits state 'WaitingForEnvironment'.
+<StateLog> MasqueTestDriver(2) enters state 'Running'.
+<SendLog> 'MasqueTestDriver(2)' in state 'Running' sent event 'ceSendPacket with payload (<encapsulatedSessionId:1, target:<host:10, port:443, >, packet:<id:1, dataClass:0, >, >)' to 'MasqueClientSession(6)'.
+<DequeueLog> 'MasqueClientSession(6)' dequeued event 'ceSendPacket with payload (<encapsulatedSessionId:1, target:<host:10, port:443, >, packet:<id:1, dataClass:0, >, >)' in state 'Active'.
+<RandomLog> MasqueClientSession(6) nondeterministically chose 'False'.
+<AnnounceLog> 'MasqueClientSession(6)' announced event 'meBindPrepareOnNullState' with payload 0.
+<MonitorLog> BindStateCreationSafety is processing event 'meBindPrepareOnNullState with payload (0)' in state 'Safe'.
+<ErrorLog> Assertion Failed: PSpec/BindStateCreationSafety.p:47:13 CONNECT-UDP-BIND would dereference null ConnectUdpClientState at failure stage 0
+<StrategyLog> Found bug using 'random' strategy.
+<StrategyLog> Checking statistics:
+<StrategyLog> Found 1 bug.
+<StrategyLog> Scheduling statistics:
+<StrategyLog> Explored 1 schedule
+<StrategyLog> Explored 1 timeline
+<StrategyLog> Found 100.00% buggy schedules.
+<StrategyLog> Number of scheduling points in terminating schedules: 23 (min), 23 (avg), 23 (max).

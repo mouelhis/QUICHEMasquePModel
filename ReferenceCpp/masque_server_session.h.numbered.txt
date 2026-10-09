@@ -1,0 +1,263 @@
+     1	// Copyright 2019 The Chromium Authors. All rights reserved.
+     2	// Use of this source code is governed by a BSD-style license that can be
+     3	// found in the LICENSE file.
+     4	
+     5	#ifndef QUICHE_QUIC_MASQUE_MASQUE_SERVER_SESSION_H_
+     6	#define QUICHE_QUIC_MASQUE_MASQUE_SERVER_SESSION_H_
+     7	
+     8	#include <sys/types.h>
+     9	
+    10	#include <cstdint>
+    11	#include <limits>
+    12	#include <list>
+    13	#include <memory>
+    14	
+    15	#include "absl/strings/string_view.h"
+    16	#include "quiche/quic/core/crypto/quic_compressed_certs_cache.h"
+    17	#include "quiche/quic/core/crypto/quic_crypto_server_config.h"
+    18	#include "quiche/quic/core/frames/quic_connection_close_frame.h"
+    19	#include "quiche/quic/core/http/http_frames.h"
+    20	#include "quiche/quic/core/http/quic_spdy_session.h"
+    21	#include "quiche/quic/core/http/quic_spdy_stream.h"
+    22	#include "quiche/quic/core/io/quic_event_loop.h"
+    23	#include "quiche/quic/core/quic_config.h"
+    24	#include "quiche/quic/core/quic_connection.h"
+    25	#include "quiche/quic/core/quic_crypto_server_stream_base.h"
+    26	#include "quiche/quic/core/quic_session.h"
+    27	#include "quiche/quic/core/quic_time.h"
+    28	#include "quiche/quic/core/quic_types.h"
+    29	#include "quiche/quic/core/quic_udp_socket.h"
+    30	#include "quiche/quic/core/quic_versions.h"
+    31	#include "quiche/quic/masque/masque_server_backend.h"
+    32	#include "quiche/quic/masque/masque_utils.h"
+    33	#include "quiche/quic/platform/api/quic_export.h"
+    34	#include "quiche/quic/platform/api/quic_ip_address.h"
+    35	#include "quiche/quic/platform/api/quic_socket_address.h"
+    36	#include "quiche/quic/tools/quic_backend_response.h"
+    37	#include "quiche/quic/tools/quic_simple_server_backend.h"
+    38	#include "quiche/quic/tools/quic_simple_server_session.h"
+    39	#include "quiche/common/capsule.h"
+    40	#include "quiche/common/http/http_header_block.h"
+    41	
+    42	namespace quic {
+    43	
+    44	// QUIC server session for connection to MASQUE proxy.
+    45	class QUIC_NO_EXPORT MasqueServerSession
+    46	    : public QuicSimpleServerSession,
+    47	      public MasqueServerBackend::BackendClient,
+    48	      public QuicSocketEventListener {
+    49	 public:
+    50	  using ContextId = uint64_t;
+    51	  constexpr static ContextId kInvalidContextId =
+    52	      std::numeric_limits<uint64_t>::max();
+    53	
+    54	  explicit MasqueServerSession(
+    55	      MasqueMode masque_mode, const QuicConfig& config,
+    56	      const ParsedQuicVersionVector& supported_versions,
+    57	      QuicConnection* connection, QuicSession::Visitor* visitor,
+    58	      QuicEventLoop* event_loop, QuicCryptoServerStreamBase::Helper* helper,
+    59	      const QuicCryptoServerConfig* crypto_config,
+    60	      QuicCompressedCertsCache* compressed_certs_cache,
+    61	      MasqueServerBackend* masque_server_backend);
+    62	
+    63	  // Disallow copy and assign.
+    64	  MasqueServerSession(const MasqueServerSession&) = delete;
+    65	  MasqueServerSession& operator=(const MasqueServerSession&) = delete;
+    66	
+    67	  // From QuicSession.
+    68	  void OnDatagramAcked(QuicDatagramId datagram_id) override;
+    69	  void OnDatagramLost(QuicDatagramId datagram_id) override;
+    70	  void OnConnectionClosed(const QuicConnectionCloseFrame& frame,
+    71	                          ConnectionCloseSource source) override;
+    72	  void OnStreamClosed(QuicStreamId stream_id) override;
+    73	
+    74	  // From MasqueServerBackend::BackendClient.
+    75	  std::unique_ptr<QuicBackendResponse> HandleMasqueRequest(
+    76	      const quiche::HttpHeaderBlock& request_headers,
+    77	      QuicSimpleServerBackend::RequestHandler* request_handler) override;
+    78	  QuicSpdySession* GetQuicSpdySession() override;
+    79	
+    80	  // From QuicSocketEventListener.
+    81	  void OnSocketEvent(QuicEventLoop* event_loop, QuicUdpSocketFd fd,
+    82	                     QuicSocketEventMask events) override;
+    83	
+    84	  QuicEventLoop* event_loop() const { return event_loop_; }
+    85	  MasqueServerBackend* masque_server_backend() const {
+    86	    return masque_server_backend_;
+    87	  }
+    88	
+    89	  // Send DNS_ASSIGN capsule to all active CONNECT-IP client streams.
+    90	  void SendDnsAssignCapsule(const DnsAssignCapsule& capsule);
+    91	
+    92	  // Send PREF64 capsule to all active CONNECT-IP client streams.
+    93	  void SendPref64Capsule(const Pref64Capsule& capsule);
+    94	
+    95	 private:
+    96	  bool HandleConnectUdpSocketEvent(QuicUdpSocketFd fd,
+    97	                                   QuicSocketEventMask events);
+    98	  bool HandleConnectIpSocketEvent(QuicUdpSocketFd fd,
+    99	                                  QuicSocketEventMask events);
+   100	  bool HandleConnectEthernetSocketEvent(QuicUdpSocketFd fd,
+   101	                                        QuicSocketEventMask events);
+   102	  std::unique_ptr<QuicBackendResponse> MaybeCheckConcealedAuth(
+   103	      const quiche::HttpHeaderBlock& request_headers,
+   104	      absl::string_view authority, absl::string_view scheme,
+   105	      QuicSimpleServerBackend::RequestHandler* request_handler);
+   106	
+   107	  // State that the MasqueServerSession keeps for each CONNECT-UDP request.
+   108	  class QUIC_NO_EXPORT ConnectUdpServerState
+   109	      : public QuicSpdyStream::Http3DatagramVisitor,
+   110	        public QuicSpdyStream::ConnectUdpBindVisitor {
+   111	   public:
+   112	    // Server state for CONNECT-UDP and CONNECT-UDP-BIND.
+   113	    // is_bind is true for CONNECT-UDP-BIND.
+   114	    explicit ConnectUdpServerState(
+   115	        QuicSpdyStream* stream, const QuicSocketAddress& target_server_address,
+   116	        QuicUdpSocketFd bind_fd, MasqueServerSession* masque_session,
+   117	        bool is_bind = false);
+   118	
+   119	    ~ConnectUdpServerState();
+   120	
+   121	    // Disallow copy but allow move.
+   122	    ConnectUdpServerState(const ConnectUdpServerState&) = delete;
+   123	    ConnectUdpServerState(ConnectUdpServerState&&);
+   124	    ConnectUdpServerState& operator=(const ConnectUdpServerState&) = delete;
+   125	    ConnectUdpServerState& operator=(ConnectUdpServerState&&);
+   126	
+   127	    QuicSpdyStream* stream() const { return stream_; }
+   128	    const QuicSocketAddress& target_server_address() const {
+   129	      return target_server_address_;
+   130	    }
+   131	    QuicUdpSocketFd fd() const { return fd_; }
+   132	
+   133	    // CONNECT-UDP-BIND.
+   134	    bool is_bind() const { return is_bind_; }
+   135	
+   136	    // From QuicSpdyStream::Http3DatagramVisitor.
+   137	    void OnHttp3Datagram(QuicStreamId stream_id,
+   138	                         absl::string_view payload) override;
+   139	    void OnUnknownCapsule(QuicStreamId /*stream_id*/,
+   140	                          const quiche::UnknownCapsule& /*capsule*/) override {}
+   141	
+   142	    // From QuicSpdyStream::ConnectUdpBindVisitor.
+   143	    bool OnCompressionAssignCapsule(
+   144	        const quiche::CompressionAssignCapsule& capsule) override;
+   145	    bool OnCompressionCloseCapsule(
+   146	        const quiche::CompressionCloseCapsule& capsule) override;
+   147	
+   148	    absl::flat_hash_map<ContextId, quic::QuicSocketAddress>&
+   149	    bind_context_ip_map() {
+   150	      return bind_context_ip_map_;
+   151	    }
+   152	
+   153	   private:
+   154	    QuicSpdyStream* stream_;
+   155	    QuicSocketAddress target_server_address_;
+   156	    QuicUdpSocketFd fd_;                   // Owned.
+   157	    MasqueServerSession* masque_session_;  // Unowned.
+   158	    bool is_bind_;
+   159	
+   160	    // CONNECT-UDP-BIND context id to ip:port map.
+   161	    absl::flat_hash_map<ContextId, quic::QuicSocketAddress>
+   162	        bind_context_ip_map_ = {};
+   163	    // TODO(abhisinghx): Add Server's ability to request compression
+   164	    // or close contexts.
+   165	  };
+   166	
+   167	  // State that the MasqueServerSession keeps for each CONNECT-IP request.
+   168	  class QUIC_NO_EXPORT ConnectIpServerState
+   169	      : public QuicSpdyStream::Http3DatagramVisitor,
+   170	        public QuicSpdyStream::ConnectIpVisitor {
+   171	   public:
+   172	    // ConnectIpServerState takes ownership of |fd|. It will unregister it
+   173	    // from |event_loop| and close the file descriptor when destructed.
+   174	    explicit ConnectIpServerState(QuicIpAddress client_ip,
+   175	                                  QuicSpdyStream* stream, QuicUdpSocketFd fd,
+   176	                                  MasqueServerSession* masque_session);
+   177	
+   178	    ~ConnectIpServerState();
+   179	
+   180	    // Disallow copy but allow move.
+   181	    ConnectIpServerState(const ConnectIpServerState&) = delete;
+   182	    ConnectIpServerState(ConnectIpServerState&&);
+   183	    ConnectIpServerState& operator=(const ConnectIpServerState&) = delete;
+   184	    ConnectIpServerState& operator=(ConnectIpServerState&&);
+   185	
+   186	    QuicSpdyStream* stream() const { return stream_; }
+   187	    QuicUdpSocketFd fd() const { return fd_; }
+   188	
+   189	    // From QuicSpdyStream::Http3DatagramVisitor.
+   190	    void OnHttp3Datagram(QuicStreamId stream_id,
+   191	                         absl::string_view payload) override;
+   192	    void OnUnknownCapsule(QuicStreamId stream_id,
+   193	                          const quiche::UnknownCapsule& capsule) override;
+   194	
+   195	    // From QuicSpdyStream::ConnectIpVisitor.
+   196	    bool OnAddressAssignCapsule(
+   197	        const quiche::AddressAssignCapsule& capsule) override;
+   198	    bool OnAddressRequestCapsule(
+   199	        const quiche::AddressRequestCapsule& capsule) override;
+   200	    bool OnRouteAdvertisementCapsule(
+   201	        const quiche::RouteAdvertisementCapsule& capsule) override;
+   202	    virtual bool OnDnsAssignCapsule(const DnsAssignCapsule& capsule);
+   203	    virtual bool OnPref64Capsule(const Pref64Capsule& capsule);
+   204	    void OnHeadersWritten() override;
+   205	
+   206	   private:
+   207	    QuicIpAddress client_ip_;
+   208	    QuicSpdyStream* stream_;
+   209	    QuicUdpSocketFd fd_;                   // Owned.
+   210	    MasqueServerSession* masque_session_;  // Unowned.
+   211	  };
+   212	
+   213	  // State that the MasqueServerSession keeps for each CONNECT-ETHERNET request.
+   214	  class QUIC_NO_EXPORT ConnectEthernetServerState
+   215	      : public QuicSpdyStream::Http3DatagramVisitor {
+   216	   public:
+   217	    // ConnectEthernetServerState takes ownership of |fd|. It will unregister it
+   218	    // from |event_loop| and close the file descriptor when destructed.
+   219	    explicit ConnectEthernetServerState(QuicSpdyStream* stream,
+   220	                                        QuicUdpSocketFd fd,
+   221	                                        MasqueServerSession* masque_session);
+   222	
+   223	    ~ConnectEthernetServerState();
+   224	
+   225	    // Disallow copy but allow move.
+   226	    ConnectEthernetServerState(const ConnectEthernetServerState&) = delete;
+   227	    ConnectEthernetServerState(ConnectEthernetServerState&&);
+   228	    ConnectEthernetServerState& operator=(const ConnectEthernetServerState&) =
+   229	        delete;
+   230	    ConnectEthernetServerState& operator=(ConnectEthernetServerState&&);
+   231	
+   232	    QuicSpdyStream* stream() const { return stream_; }
+   233	    QuicUdpSocketFd fd() const { return fd_; }
+   234	
+   235	    // From QuicSpdyStream::Http3DatagramVisitor.
+   236	    void OnHttp3Datagram(QuicStreamId stream_id,
+   237	                         absl::string_view payload) override;
+   238	    void OnUnknownCapsule(QuicStreamId /*stream_id*/,
+   239	                          const quiche::UnknownCapsule& /*capsule*/) override {}
+   240	
+   241	   private:
+   242	    QuicSpdyStream* stream_;
+   243	    QuicUdpSocketFd fd_;                   // Owned.
+   244	    MasqueServerSession* masque_session_;  // Unowned.
+   245	  };
+   246	
+   247	  // From QuicSpdySession.
+   248	  bool OnSettingsFrame(const SettingsFrame& frame) override;
+   249	  HttpDatagramSupport LocalHttpDatagramSupport() override {
+   250	    return HttpDatagramSupport::kRfc;
+   251	  }
+   252	
+   253	  MasqueServerBackend* masque_server_backend_;  // Unowned.
+   254	  QuicEventLoop* event_loop_;                   // Unowned.
+   255	  MasqueMode masque_mode_;
+   256	  std::list<ConnectUdpServerState> connect_udp_server_states_;
+   257	  std::list<ConnectIpServerState> connect_ip_server_states_;
+   258	  std::list<ConnectEthernetServerState> connect_ethernet_server_states_;
+   259	};
+   260	
+   261	}  // namespace quic
+   262	
+   263	#endif  // QUICHE_QUIC_MASQUE_MASQUE_SERVER_SESSION_H_

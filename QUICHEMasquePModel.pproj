@@ -1,0 +1,10 @@
+<!-- P Project file for the implementation-faithful QUICHE MASQUE CONNECT-UDP model. -->
+<Project>
+  <ProjectName>QUICHEMasquePModel</ProjectName>
+  <InputFiles>
+    <PFile>./PSrc/</PFile>
+    <PFile>./PSpec/</PFile>
+    <PFile>./PTst/</PFile>
+  </InputFiles>
+  <OutputDir>./PGenerated/</OutputDir>
+</Project>
